@@ -1,5 +1,12 @@
 local modname = "Restored Hearts"
 
+DeadSeaScrollsMenu.AddChangelog(modname, "v1.3.5", [[{{FSIZE2}}fixes
+- fixed illusions getting more than
+one hp
+- fixed illusions collision with bed
+]],
+{"restored", "hearts", "", "v1.3.5", "release"}, false, false)
+
 DeadSeaScrollsMenu.AddChangelog(modname, "v1.3.4", [[{{FSIZE2}}fixes
 - fixed eid errors on launch
 ]],
