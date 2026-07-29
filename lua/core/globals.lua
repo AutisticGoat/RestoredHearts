@@ -1,6 +1,6 @@
 RestoredHearts.SaveManager.Utility.AddDefaultRunData(
 	RestoredHearts.SaveManager.DefaultSaveKeys.GLOBAL,
-	{ CustomHealthAPI = "", IllusionData = {} }
+	{ IllusionData = {} }
 )
 
 RestoredHearts.RNG = RNG()

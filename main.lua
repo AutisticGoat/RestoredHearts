@@ -9,6 +9,7 @@ include("lua.helpers.Helpers")
 include("lua.extraLibs.APIs.customhealthapi.core")
 RestoredHearts.SaveManager = include("lua.core.save_manager")
 RestoredHearts.SaveManager.Init(RestoredHearts)
+RestoredHearts.SaveManager.InitCHAPI(CustomHealthAPI)
 include("lua.core.saving_system")
 
 include("lua.extraLibs.APIs.ImmortalAPI")
