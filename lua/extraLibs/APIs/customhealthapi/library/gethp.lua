@@ -42,7 +42,7 @@ function CustomHealthAPI.Library.GetHPOfKey(player, key, byActualHP, byBasegameH
 		end
 	end
 	
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -73,7 +73,11 @@ function CustomHealthAPI.Library.GetHPOfKey(player, key, byActualHP, byBasegameH
 	
 	local typ = CustomHealthAPI.Library.GetInfoOfKey(key, "Type")
 	if typ == CustomHealthAPI.Enums.HealthTypes.OVERLAY then
-		return data.Overlays[key] or 0
+		if CustomHealthAPI.Library.GetInfoOfKey(key, "MaxHP") > 0 then
+			return CustomHealthAPI.Helper.GetTotalHPOfKey(player, key, ignoreHPCache)
+		else
+			return CustomHealthAPI.Helper.GetTotalKeys(player, key, ignoreHPCache)
+		end
 	elseif typ == CustomHealthAPI.Enums.HealthTypes.RED then
 		local redHealthMasks = data.RedHealthMasks
 		
@@ -259,20 +263,27 @@ function CustomHealthAPI.Library.GetHPOfKey(player, key, byActualHP, byBasegameH
 end
 
 function CustomHealthAPI.Library.ClearHPCache(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	if data then
 		data.Cached = {}
 	end
 end
 
-function CustomHealthAPI.Helper.GetTotalHP(player, ignoreHPCache)
+function CustomHealthAPI.Helper.GetTotalHP(player, ignoreHPCache, includeOverlayHP)
 	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then
 		return CustomHealthAPI.PersistentData.OverriddenFunctions.GetHearts(player) + 
 		       CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player) + 
 		       CustomHealthAPI.PersistentData.OverriddenFunctions.GetBoneHearts(player)
 	end
 	
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -304,11 +315,47 @@ function CustomHealthAPI.Helper.GetTotalHP(player, ignoreHPCache)
 		data.Cached.TotalHP = totalHP
 	end
 	
+	if includeOverlayHP then
+		totalHP = totalHP + CustomHealthAPI.Helper.GetTotalOverlayHP(player, ignoreHPCache)
+	end
+	
+	return totalHP
+end
+
+function CustomHealthAPI.Helper.GetTotalOverlayHP(player, ignoreHPCache)
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then
+		return CustomHealthAPI.PersistentData.OverriddenFunctions.GetEternalHearts(player)
+	end
+	
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	
+	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
+		data.Cached = data.Cached or {}
+		if data.Cached.TotalOverlayHP ~= nil then
+			return data.Cached.TotalOverlayHP
+		end
+	end
+	
+	local totalHP = 0
+	
+	for overlayLayerIndex, overlayLayer in ipairs(data.OverlayHealthMaskLayers) do
+		for overlayMaskIndex, overlayIndexInMask, overlay in CustomHealthAPI.Helper.GetHealthMasksIterator(overlayLayer, false) do
+			totalHP = totalHP + overlay.HP
+		end
+	end
+	
 	return totalHP
 end
 
 function CustomHealthAPI.Helper.GetTotalRedHP(player, basegameFormat, getFormat, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -365,7 +412,7 @@ function CustomHealthAPI.Helper.GetTotalRedHP(player, basegameFormat, getFormat,
 end
 
 function CustomHealthAPI.Helper.GetTotalSoulHP(player, basegameFormat, getFormat, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -425,7 +472,7 @@ function CustomHealthAPI.Helper.GetTotalSoulHP(player, basegameFormat, getFormat
 end
 
 function CustomHealthAPI.Helper.GetTotalMaxHP(player, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -463,7 +510,7 @@ function CustomHealthAPI.Helper.GetTotalMaxHP(player, ignoreHPCache)
 end
 
 function CustomHealthAPI.Helper.GetTotalBoneHP(player, basegameFormat, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -512,7 +559,7 @@ function CustomHealthAPI.Helper.GetTotalBoneHP(player, basegameFormat, ignoreHPC
 end
 
 function CustomHealthAPI.Helper.GetTotalBrokenHP(player, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -546,7 +593,7 @@ function CustomHealthAPI.Helper.GetTotalBrokenHP(player, ignoreHPCache)
 end
 
 function CustomHealthAPI.Helper.GetTotalHPOfKey(player, key, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -558,24 +605,9 @@ function CustomHealthAPI.Helper.GetTotalHPOfKey(player, key, ignoreHPCache)
 	
 	local totalHP = 0
 	
-	local redHealthMasks = data.RedHealthMasks
-	local otherHealthMasks = data.OtherHealthMasks
-	
-	for i = 1, #redHealthMasks do
-		local mask = redHealthMasks[i]
-		for j = 1, #mask do
-			if mask[j].Key == key then
-				totalHP = totalHP + mask[j].HP
-			end
-		end
-	end
-	
-	for i = 1, #otherHealthMasks do
-		local mask = otherHealthMasks[i]
-		for j = 1, #mask do
-			if mask[j].Key == key then
-				totalHP = totalHP + mask[j].HP
-			end
+	for _, health in ipairs(CustomHealthAPI.Helper.GetMaskForKey(player, key)) do
+		if health.Key == key then
+			totalHP = totalHP + health.HP
 		end
 	end
 	
@@ -587,7 +619,7 @@ function CustomHealthAPI.Helper.GetTotalHPOfKey(player, key, ignoreHPCache)
 end
 
 function CustomHealthAPI.Helper.GetTotalKeys(player, key, ignoreHPCache)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
 		data.Cached = data.Cached or {}
@@ -599,24 +631,9 @@ function CustomHealthAPI.Helper.GetTotalKeys(player, key, ignoreHPCache)
 	
 	local totalHealth = 0
 	
-	local redHealthMasks = data.RedHealthMasks
-	local otherHealthMasks = data.OtherHealthMasks
-	
-	for i = 1, #redHealthMasks do
-		local mask = redHealthMasks[i]
-		for j = 1, #mask do
-			if mask[j].Key == key then
-				totalHealth = totalHealth + 1
-			end
-		end
-	end
-	
-	for i = 1, #otherHealthMasks do
-		local mask = otherHealthMasks[i]
-		for j = 1, #mask do
-			if mask[j].Key == key then
-				totalHealth = totalHealth + 1
-			end
+	for _, health in ipairs(CustomHealthAPI.Helper.GetMaskForKey(player, key)) do
+		if health.Key == key then
+			totalHealth = totalHealth + 1
 		end
 	end
 	
@@ -627,8 +644,16 @@ function CustomHealthAPI.Helper.GetTotalKeys(player, key, ignoreHPCache)
 	return totalHealth
 end
 
+function CustomHealthAPI.Helper.GetTotalKeysInAllMasks(player, maskSet)
+	local count = 0
+	for maskIdx, hpIdx, health in CustomHealthAPI.Helper.GetHealthMasksIterator(maskSet, false) do
+		count = count + 1
+	end
+	return count
+end
+
 function CustomHealthAPI.Helper.GetRedCapacity(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local totalCapacity = 0
 	local otherHealthMasks = data.OtherHealthMasks
@@ -648,7 +673,7 @@ function CustomHealthAPI.Helper.GetRedCapacity(player)
 end
 
 function CustomHealthAPI.Helper.GetAmountUnoccupiedContainers(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local totalContainers = 0
 	local otherHealthMasks = data.OtherHealthMasks
@@ -678,7 +703,7 @@ function CustomHealthAPI.Helper.GetAmountUnoccupiedContainers(player)
 end
 
 function CustomHealthAPI.Helper.GetHealableRedHP(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local totalHealableRedHP = 0
 	
@@ -694,7 +719,7 @@ function CustomHealthAPI.Helper.GetHealableRedHP(player)
 end
 
 function CustomHealthAPI.Helper.GetHealableSoulHP(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local totalHealableSoulHP = 0
 	
@@ -712,10 +737,29 @@ function CustomHealthAPI.Helper.GetHealableSoulHP(player)
 	return totalHealableSoulHP
 end
 
+if REPENTOGON then
+	function CustomHealthAPI.Helper.AddHeartLimitCallback()
+	---@diagnostic disable-next-line: param-type-mismatch
+		Isaac.AddPriorityCallback(CustomHealthAPI.Mod, ModCallbacks.MC_PLAYER_GET_HEART_LIMIT, CustomHealthAPI.Enums.CallbackPriorities.EARLY, CustomHealthAPI.Mod.HeartLimitCallback, -1)
+	end
+	table.insert(CustomHealthAPI.CallbacksToAdd, CustomHealthAPI.Helper.AddHeartLimitCallback)
+
+	function CustomHealthAPI.Helper.RemoveHeartLimitCallback()
+		CustomHealthAPI.Mod:RemoveCallback(ModCallbacks.MC_PLAYER_GET_HEART_LIMIT, CustomHealthAPI.Mod.HeartLimitCallback)
+	end
+	table.insert(CustomHealthAPI.CallbacksToRemove, CustomHealthAPI.Helper.RemoveHeartLimitCallback)
+
+	function CustomHealthAPI.Mod:HeartLimitCallback(player)
+		local newCap = Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.GET_MAX_HP_CAP, player:GetPlayerType(), player)
+		if newCap ~= nil then
+			return newCap
+		end
+	end
+end
+
 function CustomHealthAPI.Helper.GetTrueHeartLimit(player)
-	local callbacks = CustomHealthAPI.Helper.GetCallbacks(CustomHealthAPI.Enums.Callbacks.GET_MAX_HP_CAP)
-	for _, callback in ipairs(callbacks) do
-		local newCap = callback.Function(player)
+	if not REPENTOGON then
+		local newCap = Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.GET_MAX_HP_CAP, player:GetPlayerType(), player)
 		if newCap ~= nil then
 			return newCap
 		end
@@ -730,7 +774,7 @@ end
 function CustomHealthAPI.Helper.GetRoomForOtherKeys(player)
 	local limit = math.ceil(CustomHealthAPI.Helper.GetTrueHeartLimit(player) / 2)
 	
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local otherHealthMasks = data.OtherHealthMasks
 	
 	local totalOther = 0
@@ -746,58 +790,25 @@ function CustomHealthAPI.Helper.GetRoomForOtherKeys(player)
 	return limit - totalOther
 end
 
-function CustomHealthAPI.Helper.GetNumOverlayableHearts(player)
-	local data = player:GetData().CustomHealthAPISavedata
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
-	
-	local redOrder = {}
-	for i = 1, #redMasks do
-		local mask = redMasks[i]
-		for j = 1, #mask do
-			table.insert(redOrder, {i, j})
-		end
+function CustomHealthAPI.Helper.GetNumOverlayableHearts(player, overlayLayerIndex)
+	if not overlayLayerIndex then
+		overlayLayerIndex = "GOLDEN_HEART"
 	end
-		
-	local healthOrder = {}
-	local redIndex = 1
-	for i = 1, #otherMasks do
-		local mask = otherMasks[i]
-		for j = 1, #mask do
-			local health = mask[j]
-			local key = health.Key
-			
-			if CustomHealthAPI.PersistentData.HealthDefinitions[key].Type == CustomHealthAPI.Enums.HealthTypes.CONTAINER and
-			   CustomHealthAPI.PersistentData.HealthDefinitions[key].KindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE
-			then
-				table.insert(healthOrder, {Red = redOrder[redIndex], Other = {i, j}})
-				redIndex = redIndex + 1
-			elseif CustomHealthAPI.PersistentData.HealthDefinitions[key].Type == CustomHealthAPI.Enums.HealthTypes.SOUL then
-				table.insert(healthOrder, {Red = nil, Other = {i, j}})
-			end
-		end
+	if type(overlayLayerIndex) == "string" then
+		overlayLayerIndex = CustomHealthAPI.PersistentData.HealthDefinitions[overlayLayerIndex].OverlayLayerIndex
 	end
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local numOverlayable = 0
-	for i = 1, #healthOrder do
-		local redIndices = healthOrder[i].Red
-		local otherIndices = healthOrder[i].Other
+	
+	local redIterator = CustomHealthAPI.Helper.GetHealthMasksIterator(data.RedHealthMasks, false)
+	
+	for maskIdx, hpIdx, health in CustomHealthAPI.Helper.GetHealthMasksIterator(data.OtherHealthMasks, false) do
+		local healthDef = CustomHealthAPI.PersistentData.HealthDefinitions[health.Key]
+		local hasRedHealth = healthDef.Type == CustomHealthAPI.Enums.HealthTypes.CONTAINER and
+		   healthDef.KindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE and redIterator() ~= nil
 		
-		local health = otherMasks[otherIndices[1]][otherIndices[2]]
-		local key = health.Key
-		
-		if CustomHealthAPI.PersistentData.HealthDefinitions[key].Type == CustomHealthAPI.Enums.HealthTypes.CONTAINER and
-		   CustomHealthAPI.PersistentData.HealthDefinitions[key].KindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE and
-		   CustomHealthAPI.PersistentData.HealthDefinitions[key].MaxHP == 0 and 
-		   redIndices ~= nil
-		then
-			numOverlayable = numOverlayable + 1
-		elseif CustomHealthAPI.PersistentData.HealthDefinitions[key].Type == CustomHealthAPI.Enums.HealthTypes.CONTAINER and
-			   CustomHealthAPI.PersistentData.HealthDefinitions[key].KindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE and
-			   CustomHealthAPI.PersistentData.HealthDefinitions[key].MaxHP > 0 
-		then
-			numOverlayable = numOverlayable + 1
-		elseif CustomHealthAPI.PersistentData.HealthDefinitions[key].Type == CustomHealthAPI.Enums.HealthTypes.SOUL then
+		if CustomHealthAPI.Helper.CanOverlayHealthAtLayer(health.Key, hasRedHealth, overlayLayerIndex) then
 			numOverlayable = numOverlayable + 1
 		end
 	end
@@ -815,4 +826,216 @@ function CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
 		blackMask = blackMask >> 1
 	end
 	return blackNum
+end
+
+function CustomHealthAPI.Helper.DoesContainerHaveRedHP(player, key, ignoreHPCache)
+	CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+	CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+	CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+	if not ignoreResyncing then 
+		CustomHealthAPI.Helper.ResyncHealthOfPlayer(player)
+	end
+	
+	if player:GetPlayerType() == PlayerType.PLAYER_THESOUL_B then
+		if player:GetOtherTwin() ~= nil then
+			return CustomHealthAPI.Library.GetHPOfKey(player:GetOtherTwin(), key, byActualHP, byBasegameHP)
+		end
+	end
+	
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then
+		local numRed = math.ceil(CustomHealthAPI.PersistentData.OverriddenFunctions.GetHearts(player) / 2)
+		local numMax = math.ceil(CustomHealthAPI.PersistentData.OverriddenFunctions.GetMaxHearts(player) / 2)
+		local numBone = CustomHealthAPI.PersistentData.OverriddenFunctions.GetBoneHearts(player)
+		if key == "EMPTY_HEART" or 
+		   (CustomHealthAPI.Helper.PlayerHasCoinHealth(player) and key == "EMPTY_COIN_HEART")
+		then
+			return numMax > 0 and numRed > 0
+		elseif key == "BONE_HEART" then
+			return numBone > 0 and numRed - numMax > 0
+		else
+			return false
+		end
+	end
+	
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	
+	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
+		data.Cached = data.Cached or {}
+		data.Cached.KeyHasRedHP = data.Cached.KeyHasRedHP or {}
+		if data.Cached.KeyHasRedHP[key] ~= nil then
+			return data.Cached.KeyHasRedHP[key]
+		end
+	end
+	
+	local typ = CustomHealthAPI.Library.GetInfoOfKey(key, "Type")
+	if typ == CustomHealthAPI.Enums.HealthTypes.CONTAINER then
+		local kindContained = CustomHealthAPI.Library.GetInfoOfKey(key, "KindContained")
+		local canHaveHalfCapacity = CustomHealthAPI.Library.GetInfoOfKey(key, "CanHaveHalfCapacity")
+		
+		if kindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE then
+			local remainingRed = 0
+			local redHealthMasks = data.RedHealthMasks
+			
+			for i = 1, #redHealthMasks do
+				local mask = redHealthMasks[i]
+				for j = 1, #mask do
+					remainingRed = remainingRed + 1
+				end
+			end
+			
+			local hasRedHP = false
+			local otherHealthMasks = data.OtherHealthMasks
+			for i = 1, #otherHealthMasks do
+				local mask = otherHealthMasks[i]
+				for j = 1, #mask do
+					local health = mask[j]
+					local healthDefinition = CustomHealthAPI.PersistentData.HealthDefinitions[health.Key]
+					if healthDefinition.Type == CustomHealthAPI.Enums.HealthTypes.CONTAINER and healthDefinition.KindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE then
+						if health.Key == key then
+							hasRedHP = remainingRed > 0
+							break
+						else
+							remainingRed = remainingRed - 1
+						end
+					end
+				end
+			end
+			
+			if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
+				data.Cached.KeyHasRedHP[key] = hasRedHP
+			end
+			
+			return hasRedHP
+		end
+	end
+	
+	data.Cached.KeyHasRedHP[key] = false
+	return false
+end
+
+function CustomHealthAPI.Helper.GetLowestPriorityRedKeyInContainer(player, key, ignoreHPCache)
+	CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+	CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+	CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+	if not ignoreResyncing then 
+		CustomHealthAPI.Helper.ResyncHealthOfPlayer(player)
+	end
+	
+	if player:GetPlayerType() == PlayerType.PLAYER_THESOUL_B then
+		if player:GetOtherTwin() ~= nil then
+			return CustomHealthAPI.Helper.GetLowestPriorityRedKeyInContainer(player:GetOtherTwin(), key, ignoreHPCache)
+		end
+	end
+	
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then
+		local numRotten = CustomHealthAPI.PersistentData.OverriddenFunctions.GetRottenHearts(player)
+		local numRed = math.ceil(CustomHealthAPI.PersistentData.OverriddenFunctions.GetHearts(player) / 2) - numRotten
+		local numMax = math.ceil(CustomHealthAPI.PersistentData.OverriddenFunctions.GetMaxHearts(player) / 2)
+		local numBone = CustomHealthAPI.PersistentData.OverriddenFunctions.GetBoneHearts(player)
+		if CustomHealthAPI.Helper.PlayerHasCoinHealth(player) and key == "EMPTY_COIN_HEART" then
+			if numMax > 0 then
+				return (numRed > 0 and "RED_HEART") or nil
+			else
+				return nil
+			end
+		elseif key == "EMPTY_HEART" then
+			if numMax > 0 then
+				if numRed > 0 then
+					return "RED_HEART"
+				elseif numRotten > 0 then
+					return "ROTTEN_HEART"
+				else
+					return nil
+				end
+			else
+				return nil
+			end
+		elseif key == "BONE_HEART" then
+			while numMax > 0 do
+				if numRed > 0 then
+					numRed = numRed - 1
+				elseif numRotten > 0 then
+					numRotten = numRotten - 1
+				end
+				numMax = numMax - 1
+			end
+			if numBone > 0 then
+				if numRed > 0 then
+					return "RED_HEART"
+				elseif numRotten > 0 then
+					return "ROTTEN_HEART"
+				else
+					return nil
+				end
+			else
+				return nil
+			end
+		else
+			return nil
+		end
+	end
+	
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	
+	if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
+		data.Cached = data.Cached or {}
+		data.Cached.EarliestRedKeyInKey = data.Cached.EarliestRedKeyInKey or {}
+		data.Cached.HasCheckedEarliestRedKeyInKey = data.Cached.HasCheckedEarliestRedKeyInKey or {}
+		if data.Cached.HasCheckedEarliestRedKeyInKey[key] then
+			return data.Cached.EarliestRedKeyInKey[key]
+		end
+	end
+	
+	local typ = CustomHealthAPI.Library.GetInfoOfKey(key, "Type")
+	if typ == CustomHealthAPI.Enums.HealthTypes.CONTAINER then
+		local kindContained = CustomHealthAPI.Library.GetInfoOfKey(key, "KindContained")
+		local canHaveHalfCapacity = CustomHealthAPI.Library.GetInfoOfKey(key, "CanHaveHalfCapacity")
+		
+		if kindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE then
+			local redKeys = {}
+			local redHealthMasks = data.RedHealthMasks
+			
+			for i = 1, #redHealthMasks do
+				local mask = redHealthMasks[i]
+				for j = 1, #mask do
+					table.insert(redKeys, mask[j].Key)
+				end
+			end
+			
+			local lowestRedKey = nil
+			local lowestRedPriority = math.huge
+			local otherHealthMasks = data.OtherHealthMasks
+			for i = 1, #otherHealthMasks do
+				local mask = otherHealthMasks[i]
+				for j = 1, #mask do
+					local health = mask[j]
+					local healthDefinition = CustomHealthAPI.PersistentData.HealthDefinitions[health.Key]
+					if healthDefinition.Type == CustomHealthAPI.Enums.HealthTypes.CONTAINER and healthDefinition.KindContained ~= CustomHealthAPI.Enums.HealthKinds.NONE then
+						if health.Key == key then
+							local redKey = redKeys[1]
+							if redKey then
+								local redPriority = CustomHealthAPI.Library.GetInfoOfKey(redKey, "AddPriority")
+								if redPriority <= lowestRedPriority then
+									lowestRedKey = redKey
+									lowestRedPriority = redPriority
+								end
+							end
+						end
+						table.remove(redKeys, 1)
+					end
+				end
+			end
+			
+			if not (CustomHealthAPI.PersistentData.PreventGetHPCaching or ignoreHPCache) then
+				data.Cached.EarliestRedKeyInKey[key] = lowestRedKey
+				data.Cached.HasCheckedEarliestRedKeyInKey[key] = true
+			end
+			
+			return lowestRedKey
+		end
+	end
+	
+	data.Cached.EarliestRedKeyInKey[key] = nil
+	data.Cached.HasCheckedEarliestRedKeyInKey[key] = true
+	return nil
 end

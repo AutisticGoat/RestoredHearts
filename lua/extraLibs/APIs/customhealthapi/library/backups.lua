@@ -16,7 +16,7 @@ function CustomHealthAPI.Library.GetHealthBackup(p)
 				CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
 				CustomHealthAPI.Helper.ResyncHealthOfPlayer(player)
 			end
-			savetable.Mainplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)] = {Save = player:GetData().CustomHealthAPISavedata, Persist = player:GetData().CustomHealthAPIPersistent}
+			savetable.Mainplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)] = {Save = CustomHealthAPI.Helper.GetSavedata(player), Persist = CustomHealthAPI.Helper.GetPersistentData(player)}
 			if p ~= nil then break end
 		end
 		if subplayer ~= nil and (p == nil or (subplayer.Index == p.Index and subplayer.InitSeed == p.InitSeed)) then
@@ -25,7 +25,7 @@ function CustomHealthAPI.Library.GetHealthBackup(p)
 				CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(subplayer)
 				CustomHealthAPI.Helper.ResyncHealthOfPlayer(subplayer)
 			end
-			savetable.Subplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)] = {Save = subplayer:GetData().CustomHealthAPISavedata, Persist = subplayer:GetData().CustomHealthAPIPersistent}
+			savetable.Subplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)] = {Save = CustomHealthAPI.Helper.GetSavedata(subplayer), Persist = CustomHealthAPI.Helper.GetPersistentData(subplayer)}
 			if p ~= nil then break end
 		end
 	end
@@ -70,8 +70,8 @@ function CustomHealthAPI.Library.LoadHealthFromBackup(backup)
 end
 
 function CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(player, healthData)
-	player:GetData().CustomHealthAPISavedata = healthData["Save"]
-	player:GetData().CustomHealthAPIPersistent = healthData["Persist"]
+	CustomHealthAPI.Helper.SetSavedata(player, healthData["Save"])
+	CustomHealthAPI.Helper.SetPersistentData(player, healthData["Persist"])
 	
 	if not CustomHealthAPI.Helper.PlayerIsIgnored(player) then
 		CustomHealthAPI.Helper.HandleUnexpectedMax(player)
@@ -86,4 +86,6 @@ function CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(player, healthData)
 	                     CacheFlag.CACHE_LUCK)
 	
 	player:EvaluateItems()
+	
+	Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_LOAD_HEALTH_FROM_BACKUP, player:GetPlayerType(), player)
 end

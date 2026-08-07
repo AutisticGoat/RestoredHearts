@@ -56,6 +56,41 @@ if REPENTOGON then
 		CustomHealthAPI.Mod:RemoveCallback(ModCallbacks.MC_POST_PLAYER_ADD_HEARTS, CustomHealthAPI.Mod.PostAddHeartsCallback)
 	end
 	table.insert(CustomHealthAPI.CallbacksToRemove, CustomHealthAPI.Helper.RemovePostAddHeartsCallback)
+
+	function CustomHealthAPI.Helper.AddPreHeartLimitCallback()
+		Isaac.AddPriorityCallback(CustomHealthAPI.Mod, ModCallbacks.MC_PLAYER_GET_HEART_LIMIT, -1 * math.huge, CustomHealthAPI.Mod.PreHeartLimitCallback)
+	end
+	table.insert(CustomHealthAPI.CallbacksToAdd, CustomHealthAPI.Helper.AddPreHeartLimitCallback)
+
+	function CustomHealthAPI.Helper.RemovePreHeartLimitCallback()
+		CustomHealthAPI.Mod:RemoveCallback(ModCallbacks.MC_PLAYER_GET_HEART_LIMIT, CustomHealthAPI.Mod.PreHeartLimitCallback)
+	end
+	table.insert(CustomHealthAPI.CallbacksToRemove, CustomHealthAPI.Helper.RemovePreHeartLimitCallback)
+	
+	function CustomHealthAPI.Helper.AddPostHeartLimitCallback()
+		Isaac.AddPriorityCallback(CustomHealthAPI.Mod, ModCallbacks.MC_PLAYER_GET_HEART_LIMIT, math.huge, CustomHealthAPI.Mod.PostHeartLimitCallback)
+	end
+	table.insert(CustomHealthAPI.CallbacksToAdd, CustomHealthAPI.Helper.AddPostHeartLimitCallback)
+
+	function CustomHealthAPI.Helper.RemovePostHeartLimitCallback()
+		CustomHealthAPI.Mod:RemoveCallback(ModCallbacks.MC_PLAYER_GET_HEART_LIMIT, CustomHealthAPI.Mod.PostHeartLimitCallback)
+	end
+	table.insert(CustomHealthAPI.CallbacksToRemove, CustomHealthAPI.Helper.RemovePostHeartLimitCallback)
+end
+
+function CustomHealthAPI.Mod:PreHeartLimitCallback()
+	-- okay look
+	-- so much of the code of this godforsaken api depends on resyncing not getting called at specific times
+	-- this callback gets called literally all the goddamn time whenever literally anything hp related happens
+	-- this callback, because of how it's designed, basically guarantees that broken hearts will be checked for by whoever is using it
+	-- this callback basically guarantees that resyncing will be called WHENEVER IT TRIGGERS WHICH IS WHENEVER LITERALLY ANYTHING HP RELATED HAPPENS
+	-- IT BREAKS EVERYTHING
+	-- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
+end
+
+function CustomHealthAPI.Mod:PostHeartLimitCallback()
+	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing - 1
 end
 
 function CustomHealthAPI.Mod:PreAddHeartsCallback(player, amount, addHealthType)
@@ -107,13 +142,11 @@ if ModCallbacks.MC_PLAYER_HEALTH_TYPE_CHANGE then
 end
 
 function CustomHealthAPI.Mod:HealthTypeChangeEarlyCallback(player)
-	local data = player:GetData()
-	data.CustomHealthAPIOtherData = data.CustomHealthAPIOtherData or {}
-	data.CustomHealthAPIOtherData.InHealthTypeChangeCallback = Isaac.GetFrameCount()
+	CustomHealthAPI.Helper.GetOtherData(player).InHealthTypeChangeCallback = Isaac.GetFrameCount()
 end
 
 function CustomHealthAPI.Mod:HealthTypeChangeLateCallback(player)
-	player:GetData().CustomHealthAPIOtherData.InHealthTypeChangeCallback = nil
+	CustomHealthAPI.Helper.GetOtherData(player).InHealthTypeChangeCallback = nil
 
 	CustomHealthAPI.Helper.CheckIfHealthOrderSet()
 	CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
@@ -138,8 +171,9 @@ function CustomHealthAPI.Mod:CheckIfHealthValuesChangedCallback()
 	CustomHealthAPI.Helper.CheckIfHealthOrderSet()
 	CustomHealthAPI.Helper.CheckHealthIsInitialized()
 	CustomHealthAPI.Helper.CheckSubPlayerInfo()
-	CustomHealthAPI.Helper.ResyncHealth()
+	CustomHealthAPI.Helper.ResyncHealth(true)
 	CustomHealthAPI.Helper.CheckIfHealthValuesChanged()
+	if REPENTOGON then CustomHealthAPI.Helper.CheckMothersKissKill() end
 	
 	if CustomHealthAPI.PersistentData.DoHUDPostUpdateForLivesHUD == Isaac.GetFrameCount() then
 		Game():GetHUD():PostUpdate()
@@ -148,12 +182,15 @@ function CustomHealthAPI.Mod:CheckIfHealthValuesChangedCallback()
 end
 
 function CustomHealthAPI.Helper.CheckIfHealthOfKeeperChanged(player)
-	player:GetData().CustomHealthAPIOtherData = player:GetData().CustomHealthAPIOtherData or {}
-	local data = player:GetData().CustomHealthAPIOtherData
+	local data = CustomHealthAPI.Helper.GetOtherData(player)
 
 	data.LastValues = data.LastValues or {}
 	data.RedFlash = math.max(0, (data.RedFlash or 0) - 1)
-	data.GoldFlash = math.max(0, (data.GoldFlash or 0) - 1)
+	data.GoldFlash = 0  -- legacy
+	data.OverlayFlash = data.OverlayFlash or {}
+	for i, _ in pairs(data.OverlayFlash) do
+		data.OverlayFlash[i] = math.max(0, data.OverlayFlash[i] - 1)
+	end
 	
 	local redHp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetHearts(player)
 	if data.LastValues["COIN_HEART"] ~= nil and data.LastValues["COIN_HEART"] < redHp then
@@ -163,7 +200,8 @@ function CustomHealthAPI.Helper.CheckIfHealthOfKeeperChanged(player)
 	
 	local goldHp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetGoldenHearts(player)
 	if data.LastValues["GOLDEN_HEART"] ~= nil and data.LastValues["GOLDEN_HEART"] < goldHp then
-		data.GoldFlash = 3
+		local def = CustomHealthAPI.PersistentData.HealthDefinitions["GOLDEN_HEART"]
+		data.OverlayFlash[def.OverlayLayerIndex] = 3
 	end
 	data.LastValues["GOLDEN_HEART"] = goldHp
 end
@@ -176,38 +214,41 @@ function CustomHealthAPI.Helper.CheckIfHealthOfPlayerChanged(player)
 
 	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then return end
 
-	player:GetData().CustomHealthAPIOtherData = player:GetData().CustomHealthAPIOtherData or {}
-	local data = player:GetData().CustomHealthAPIOtherData
+	local data = CustomHealthAPI.Helper.GetOtherData(player)
 
 	data.LastValues = data.LastValues or {}
 	data.RedFlash = math.max(0, (data.RedFlash or 0) - 1)
 	data.SoulFlash = math.max(0, (data.SoulFlash or 0) - 1)
-	data.GoldFlash = math.max(0, (data.GoldFlash or 0) - 1)
+	data.GoldFlash = 0  -- legacy
+	data.OverlayFlash = data.OverlayFlash or {}
+	for i, _ in pairs(data.OverlayFlash) do
+		data.OverlayFlash[i] = math.max(0, data.OverlayFlash[i] - 1)
+	end
 
 	for key, def in pairs(CustomHealthAPI.PersistentData.HealthDefinitions) do
-		if def.Type == CustomHealthAPI.Enums.HealthTypes.RED then
-			local hp = CustomHealthAPI.Helper.GetTotalHPOfKey(player, key)
+		if not CustomHealthAPI.Helper.HealthTypeIsIcon(def.Type) then
+			local didEternalHeal = data.DidEternalHeal and data.DidEternalHeal[key] or 0
+			local hp = def.MaxHP > 0 and CustomHealthAPI.Helper.GetTotalHPOfKey(player, key) or CustomHealthAPI.Helper.GetTotalKeys(player, key)
 			if data.LastValues[key] ~= nil and data.LastValues[key] < hp then
-				data.RedFlash = 4
-				player:GetData().CustomHealthAPISavedata.ShardBleedTimer = nil
-				player:GetData().CustomHealthAPIOtherData = player:GetData().CustomHealthAPIOtherData or {}
-				player:GetData().CustomHealthAPIOtherData.BleedSpriteFrame = nil
-			end
-			data.LastValues[key] = hp
-		elseif def.Type == CustomHealthAPI.Enums.HealthTypes.SOUL then
-			local hp = CustomHealthAPI.Helper.GetTotalHPOfKey(player, key)
-			if data.LastValues[key] ~= nil and data.LastValues[key] < hp then
-				data.SoulFlash = 4
-			end
-			data.LastValues[key] = hp
-		elseif key == "GOLDEN_HEART" then
-			local hp = player:GetData().CustomHealthAPISavedata.Overlays["GOLDEN_HEART"]
-			if data.LastValues[key] ~= nil and data.LastValues[key] < hp then
-				data.GoldFlash = 3
+				if didEternalHeal < hp - data.LastValues[key] then
+					if def.Type == CustomHealthAPI.Enums.HealthTypes.RED then
+						data.RedFlash = 4
+					elseif def.Type == CustomHealthAPI.Enums.HealthTypes.SOUL then
+						data.SoulFlash = 4
+					elseif def.Type == CustomHealthAPI.Enums.HealthTypes.OVERLAY then
+						data.OverlayFlash[def.OverlayLayerIndex] = 3
+					end
+				end
+				if def.Type == CustomHealthAPI.Enums.HealthTypes.RED then
+					CustomHealthAPI.Helper.GetSavedata(player).ShardBleedTimer = nil
+					data.BleedSpriteFrame = nil
+				end
 			end
 			data.LastValues[key] = hp
 		end
 	end
+
+	data.DidEternalHeal = {}
 end
 
 function CustomHealthAPI.Helper.CheckIfHealthValuesChanged()
@@ -268,7 +309,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 	local expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART")
 	local expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player)
 	local expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true)
-	local expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART")
+	local expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player)
 	
 	local actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 	local actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -300,7 +341,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 		expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 		expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 		expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-		expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+		expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 	
 		actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 		actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -322,7 +363,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 		expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 		expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 		expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-		expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+		expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 	
 		actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 		actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -346,7 +387,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 			expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 			expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-			expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+			expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 		
 			actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 			actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -368,7 +409,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 			expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 			expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-			expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+			expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 		
 			actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 			actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -376,11 +417,13 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			actualBone = CustomHealthAPI.PersistentData.OverriddenFunctions.GetBoneHearts(player)
 			actualBroken = CustomHealthAPI.PersistentData.OverriddenFunctions.GetBrokenHearts(player)
 	
-			if diffSoulTotal ~= 0 then diffSoulTotal = actualSoulTotal - expectedSoulTotal end
-			if diffBlack ~= 0 then diffBlack = actualBlack - expectedBlack end
+			diffSoulTotal = actualSoulTotal - expectedSoulTotal
+			diffBlack = actualBlack - expectedBlack
 			if diffMax ~= 0 then diffMax = actualMax - expectedMax end
 			if diffBone ~= 0 then diffBone = actualBone - expectedBone end
 			if diffBroken ~= 0 then diffBroken = actualBroken - expectedBroken end
+			
+			ignoreSoul = diffBlack > 0 and diffBlack * 2 >= diffSoulTotal
 		end
 		
 		if diffBone > 0 then
@@ -390,7 +433,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 			expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 			expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-			expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+			expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 		
 			actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 			actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -412,7 +455,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 			expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 			expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-			expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+			expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 		
 			actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 			actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -434,7 +477,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 			expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 			expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-			expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+			expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 		
 			actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 			actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -456,7 +499,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 			expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 			expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 			expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-			expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+			expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 		
 			actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 			actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -479,7 +522,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 		expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 		expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 		expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-		expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+		expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 	
 		actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 		actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -501,7 +544,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 		expectedBlack = CustomHealthAPI.Helper.GetTotalKeys(player, "BLACK_HEART", true)
 		expectedMax = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
 		expectedBone = CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
-		expectedBroken = CustomHealthAPI.Helper.GetTotalKeys(player, "BROKEN_HEART", true)
+		expectedBroken = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 	
 		actualSoulTotal = CustomHealthAPI.PersistentData.OverriddenFunctions.GetSoulHearts(player)
 		actualBlack = CustomHealthAPI.Helper.GetBasegameBlackHeartsNum(player)
@@ -547,6 +590,7 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 		Game().Challenge = Challenge.CHALLENGE_NULL
 	end
 	
+	--CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth + 1
 	--CustomHealthAPI.Helper.AddBasegameGoldenHealthWithoutModifiers(player, -1 * goldenAfter)
 	--CustomHealthAPI.Helper.AddBasegameEternalHealthWithoutModifiers(player, -1 * eternalAfter)
 	--CustomHealthAPI.Helper.AddBasegameRedHealthWithoutModifiers(player, -1 * redTotalAfter)
@@ -555,25 +599,34 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 	--CustomHealthAPI.Helper.AddBasegameRedHealthWithoutModifiers(player, redBefore)
 	--CustomHealthAPI.Helper.AddBasegameEternalHealthWithoutModifiers(player, eternalBefore)
 	--CustomHealthAPI.Helper.AddBasegameGoldenHealthWithoutModifiers(player, goldenBefore)
+	--CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth - 1
 	
 	local rottenDiff = rottenBefore - rottenAfter
 	if rottenDiff ~= 0 then
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth + 1
 		CustomHealthAPI.Helper.AddBasegameRottenHealthWithoutModifiers(player, rottenDiff * 2)
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth - 1
 	end
 	
 	local redDiff = redBefore - (CustomHealthAPI.PersistentData.OverriddenFunctions.GetHearts(player) - (CustomHealthAPI.PersistentData.OverriddenFunctions.GetRottenHearts(player) * 2))
 	if redDiff ~= 0 then
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth + 1
 		CustomHealthAPI.Helper.AddBasegameRedHealthWithoutModifiers(player, redDiff)
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth - 1
 	end
 	
 	local goldenDiff = goldenBefore - goldenAfter
 	if goldenDiff ~= 0 then
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth + 1
 		CustomHealthAPI.Helper.AddBasegameGoldenHealthWithoutModifiers(player, goldenDiff)
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth - 1
 	end
 	
 	local eternalDiff = eternalBefore - eternalAfter
 	if eternalDiff ~= 0 then
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth + 1
 		CustomHealthAPI.Helper.AddBasegameEternalHealthWithoutModifiers(player, eternalDiff)
+		CustomHealthAPI.PersistentData.IsTechnicalAddHealth = CustomHealthAPI.PersistentData.IsTechnicalAddHealth - 1
 	end
 	
 	if addedWhoreOfBabylonPrevention then CustomHealthAPI.Helper.RemoveWhoreOfBabylonPrevention(player) end
@@ -587,20 +640,20 @@ function CustomHealthAPI.Helper.ResyncOtherHealthOfPlayer(player)
 end
 
 function CustomHealthAPI.Helper.ResyncEternalHearts(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local key = "ETERNAL_HEART"
-	local hp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetEternalHearts(player) - data.Overlays["ETERNAL_HEART"]
+	local hp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetEternalHearts(player) - CustomHealthAPI.Helper.GetTotalHPOfKey(player, key, true)
 	if hp == 0 then return end
 	
 	CustomHealthAPI.Helper.UpdateHealthMasks(player, key, hp, true, false, true, true)
 end
 
 function CustomHealthAPI.Helper.ResyncGoldHearts(player)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	
 	local key = "GOLDEN_HEART"
-	local hp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetGoldenHearts(player) - data.Overlays["GOLDEN_HEART"]
+	local hp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetGoldenHearts(player) - CustomHealthAPI.Helper.GetTotalKeys(player, key, true)
 	if hp == 0 then return end
 	
 	CustomHealthAPI.Helper.UpdateHealthMasks(player, key, hp, true, false, true, true)
@@ -617,7 +670,7 @@ function CustomHealthAPI.Helper.HandleUnexpectedRed(player)
 		CustomHealthAPI.PersistentData.PreventGetHPCaching = true
 		CustomHealthAPI.Library.ClearHPCache(player)
 		
-		local data = player:GetData().CustomHealthAPISavedata
+		local data = CustomHealthAPI.Helper.GetSavedata(player)
 		local redMasks = data.RedHealthMasks
 		
 		for i = 1, #redMasks do
@@ -634,11 +687,11 @@ function CustomHealthAPI.Helper.HandleUnexpectedRed(player)
 end
 
 function CustomHealthAPI.Helper.HandleUnexpectedMax(player)
-	if CustomHealthAPI.Helper.PlayerIsIgnored(player) or player:GetData().CustomHealthAPIOtherData.InHealthTypeChangeCallback == Isaac.GetFrameCount() then 
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) or CustomHealthAPI.Helper.GetOtherData(player).InHealthTypeChangeCallback == Isaac.GetFrameCount() then 
 		return
 	end
 
-	player:GetData().CustomHealthAPIOtherData.InHealthTypeChangeCallback = nil
+	CustomHealthAPI.Helper.GetOtherData(player).InHealthTypeChangeCallback = nil
 
 	local playerType = player:GetPlayerType()
 	local isSoulHeartOnly = CustomHealthAPI.Helper.PlayerIsSoulHeartOnly(player)
@@ -649,7 +702,7 @@ function CustomHealthAPI.Helper.HandleUnexpectedMax(player)
 		CustomHealthAPI.PersistentData.PreventGetHPCaching = true
 		CustomHealthAPI.Library.ClearHPCache(player)
 
-		local data = player:GetData().CustomHealthAPISavedata
+		local data = CustomHealthAPI.Helper.GetSavedata(player)
 		local otherMasks = data.OtherHealthMasks
 
 		local newKey = CustomHealthAPI.Helper.GetConvertedMaxHealthType(player)
@@ -701,29 +754,38 @@ function CustomHealthAPI.Helper.HandleUnexpectedMax(player)
 end
 
 function CustomHealthAPI.Helper.ResyncHealthOfPlayer(player, isSubPlayer)
-	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then return end
 	if CustomHealthAPI.PersistentData.PreventResyncing > 0 then return end
-	if player:GetData().CustomHealthAPIOtherData and player:GetData().CustomHealthAPIOtherData.InDamageCallback == Isaac.GetFrameCount() then return end
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then 
+		if REPENTOGON then 
+			CustomHealthAPI.Helper.HandleGreedsGulletSyncing(player) 
+		end
+		return
+	end
 	
-	player:GetData().CustomHealthAPIOtherData = player:GetData().CustomHealthAPIOtherData or {}
-	player:GetData().CustomHealthAPIOtherData.InDamageCallback = nil
-	player:GetData().CustomHealthAPIOtherData.DoNotUpdateBasegameHealthState = nil
+	local data = CustomHealthAPI.Helper.GetOtherData(player)
+	
+	if data.InDamageCallback == Isaac.GetFrameCount() then return end
+	
+	data.InDamageCallback = nil
+	data.DoNotUpdateBasegameHealthState = nil
 	
 	if not avoidRecursive then
 		avoidRecursive = true
 		
-		player:GetData().CustomHealthAPIOtherData.ShacklesDisabled = player:GetEffects():GetNullEffectNum(NullItemID.ID_SPIRIT_SHACKLES_DISABLED) >= 1
+		data.ShacklesDisabled = player:GetEffects():GetNullEffectNum(NullItemID.ID_SPIRIT_SHACKLES_DISABLED) >= 1
 		
 		local alabasterChargesToAdd = 0
-		if player:HasCollectible(CollectibleType.COLLECTIBLE_ALABASTER_BOX) then
+		local alabasterPlayer = CustomHealthAPI.Helper.GetAlabasterBoxOwner(player)
+		if alabasterPlayer:HasCollectible(CollectibleType.COLLECTIBLE_ALABASTER_BOX) then
 			for i = 2, 0, -1 do
-				if player:GetActiveItem(i) == CollectibleType.COLLECTIBLE_ALABASTER_BOX then
-					alabasterChargesToAdd = alabasterChargesToAdd + (12 - player:GetActiveCharge(i))
+				if alabasterPlayer:GetActiveItem(i) == CollectibleType.COLLECTIBLE_ALABASTER_BOX then
+					alabasterChargesToAdd = alabasterChargesToAdd + (12 - alabasterPlayer:GetActiveCharge(i))
 				end
 			end
 		end
-		player:GetData().CustomHealthAPIOtherData.AlabasterChargesAdded = math.max(0, (player:GetData().CustomHealthAPIOtherData.AlabasterChargesToAdd or alabasterChargesToAdd) - alabasterChargesToAdd)
-		player:GetData().CustomHealthAPIOtherData.AlabasterChargesToAdd = alabasterChargesToAdd
+		local alabasterData = CustomHealthAPI.Helper.GetOtherData(alabasterPlayer)
+		alabasterData.AlabasterChargesAdded = math.max(0, (alabasterData.AlabasterChargesToAdd or alabasterChargesToAdd) - alabasterChargesToAdd)
+		alabasterData.AlabasterChargesToAdd = alabasterChargesToAdd
 		
 		if not REPENTOGON then
 			CustomHealthAPI.Helper.FinishDamageDesync(player)
@@ -741,13 +803,12 @@ function CustomHealthAPI.Helper.ResyncHealthOfPlayer(player, isSubPlayer)
 		
 		CustomHealthAPI.Helper.HandleUnexpectedRed(player)
 		CustomHealthAPI.Helper.HandleUnexpectedMax(player)
+
+		data.LastResync = Isaac.GetFrameCount()
 		
-		local callbacks = CustomHealthAPI.Helper.GetCallbacks(CustomHealthAPI.Enums.Callbacks.POST_RESYNC_PLAYER)
-		for _, callback in ipairs(callbacks) do
-			callback.Function(player, isSubPlayer)
-		end
+		Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RESYNC_PLAYER, player:GetPlayerType(), player, isSubPlayer)
 		
-		player:GetData().CustomHealthAPIOtherData.AlabasterChargesAdded = 0
+		alabasterData.AlabasterChargesAdded = 0
 		
 		avoidRecursive = false
 	end
@@ -757,9 +818,12 @@ function CustomHealthAPI.Helper.ResyncHealthOfPlayer(player, isSubPlayer)
 	end
 end
 
-function CustomHealthAPI.Helper.ResyncHealth()
+function CustomHealthAPI.Helper.ResyncHealth(checkGullet)
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
 		CustomHealthAPI.Helper.ResyncHealthOfPlayer(player)
+		if REPENTOGON and checkGullet then
+			CustomHealthAPI.Helper.HandleGreedsGulletSyncing(player)
+		end
 	end
 end

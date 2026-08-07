@@ -1,5 +1,5 @@
 function CustomHealthAPI.Helper.TryConvertingRedHP(player, key, overflowedHP, ignoreRoomForRedKeys)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions[key].MaskIndex
 	local keyContainingMask = redMasks[maskIndex]
@@ -73,7 +73,7 @@ function CustomHealthAPI.Helper.TryInsertingRedHP(player, key, hpAddedByKey, ove
 	if (CustomHealthAPI.Helper.GetAmountUnoccupiedContainers(player) > 0 or ignoreRoomForRedKeys) and 
 	   (maxHP > 1 or hpAddedByKey + overflowedHP >= 2) 
 	then
-		local data = player:GetData().CustomHealthAPISavedata
+		local data = CustomHealthAPI.Helper.GetSavedata(player)
 		local redMasks = data.RedHealthMasks
 		local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions[key].MaskIndex
 		local keyContainingMask = redMasks[maskIndex]
@@ -95,7 +95,7 @@ function CustomHealthAPI.Helper.TryInsertingRedHP(player, key, hpAddedByKey, ove
 end
 	
 function CustomHealthAPI.Helper.TryHealingRedHP(player, key, hpAddedByKey, overflowedHP, ignoreRoomForRedKeys)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions[key].MaskIndex
 	local keyContainingMask = redMasks[maskIndex]
@@ -174,7 +174,7 @@ function CustomHealthAPI.Helper.TryHealingRedHP(player, key, hpAddedByKey, overf
 end
 
 function CustomHealthAPI.Helper.HealRedAnywhere(player, hp)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	
 	local remainingHPToHeal = hp
@@ -206,7 +206,7 @@ function CustomHealthAPI.Helper.HandleOddNumberedRotten(player, ignoreRoomForRed
 		return false, 0
 	end
 	
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions["ROTTEN_HEART"].MaskIndex
 	local keyContainingMask = redMasks[maskIndex]
@@ -305,7 +305,7 @@ function CustomHealthAPI.Helper.PlusRedMain(player, key, hp, ignoreRoomForRedKey
 end
 
 function CustomHealthAPI.Helper.TryRemoveLowPriorityRedFromMask(player, maskIndex, hpToRemove)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	local mask = redMasks[maskIndex]
 	
@@ -378,7 +378,7 @@ function CustomHealthAPI.Helper.TryRemoveLowPriorityRedFromMask(player, maskInde
 end
 
 function CustomHealthAPI.Helper.TryRemoveLowPriorityRedFromAnywhere(player, hpToRemove)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	
 	local lowestPriorityHealth
@@ -402,7 +402,7 @@ function CustomHealthAPI.Helper.TryRemoveLowPriorityRedFromAnywhere(player, hpTo
 end
 
 function CustomHealthAPI.Helper.MinusRedMain(player, key, hp)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions[key].MaskIndex
 	local keyContainingMask = redMasks[maskIndex]
@@ -434,7 +434,7 @@ function CustomHealthAPI.Helper.AddRedMain(player, key, hp)
 end
 
 function CustomHealthAPI.Helper.RemoveLowestPriorityRedKey(player, healingOverflow)
-	local data = player:GetData().CustomHealthAPISavedata
+	local data = CustomHealthAPI.Helper.GetSavedata(player)
 	local redMasks = data.RedHealthMasks
 	
 	local healthToRemove
