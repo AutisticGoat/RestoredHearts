@@ -150,7 +150,7 @@ function CustomHealthAPI.Helper.HandleGreedsGulletSyncing(player)
 			   (keyTyp == CustomHealthAPI.Enums.HealthTypes.CONTAINER and CustomHealthAPI.Library.GetInfoOfKey(key, "KindContained") ~= CustomHealthAPI.Enums.HealthKinds.NONE)
 			then
 				local data = CustomHealthAPI.Helper.GetSavedata(player)
-				local otherHealthMasks = data.OtherHealthMasks
+				local otherHealthMasks = data.OtherHealthMasks or {}
 				
 				if diffGullet > 0 then
 					local keyPriority = CustomHealthAPI.Library.GetInfoOfKey(key, "AddPriority")

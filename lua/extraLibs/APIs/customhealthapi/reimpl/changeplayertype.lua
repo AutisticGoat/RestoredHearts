@@ -83,9 +83,9 @@ function CustomHealthAPI.Helper.PreChangePlayerType(player, playertype, dontManu
 	
 	local soulCharges = player:GetSoulCharge()
 	if oldplayertype == PlayerType.PLAYER_THEFORGOTTEN then
-		CustomHealthAPI.Helper.HandleHealthOnConvertFromForgotten(player)
+		CustomHealthAPI.Helper.HandleHealthOnConvertFromForgotten(player, playertype)
 	elseif oldplayertype == PlayerType.PLAYER_THESOUL then
-		CustomHealthAPI.Helper.HandleHealthOnConvertFromTheSoul(player)
+		CustomHealthAPI.Helper.HandleHealthOnConvertFromTheSoul(player, playertype)
 	elseif oldplayertype == PlayerType.PLAYER_THEFORGOTTEN_B or oldplayertype == PlayerType.PLAYER_JACOB then
 		CustomHealthAPI.Helper.HandleHealthOnConvertFromTwin(player)
 	end
@@ -119,6 +119,12 @@ function CustomHealthAPI.Helper.PostChangePlayerType(player, playertype)
 	CustomHealthAPI.Helper.GetEntityData(player).CustomHealthAPITemp = nil
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	CustomHealthAPI.Helper.GetSavedata(player).PlayerType = playertype
 	
 	if playertype == PlayerType.PLAYER_THEFORGOTTEN then
@@ -139,7 +145,7 @@ function CustomHealthAPI.Helper.PostChangePlayerType(player, playertype)
 end
 
 function CustomHealthAPI.Helper.ChangePlayerType(player, playertype)
-	if CustomHealthAPI.Helper.PreChangePlayerType(player, playertype) then
+	if CustomHealthAPI.Helper.PreChangePlayerType(player, playertype, false) then
 		CustomHealthAPI.PersistentData.OverriddenFunctions.ChangePlayerType(player, playertype)
 		CustomHealthAPI.Helper.PostChangePlayerType(player, playertype)
 	end
@@ -147,7 +153,13 @@ end
 
 function CustomHealthAPI.Helper.RestrictBrokenHearts(player, limit)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local otherMasks = data.OtherHealthMasks or {}
 
 	while CustomHealthAPI.Helper.GetTotalBrokenHP(player, true) > limit do
 		local lowestPriorityHealth
@@ -181,7 +193,13 @@ end
 
 function CustomHealthAPI.Helper.RestrictBoneHearts(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local otherMasks = data.OtherHealthMasks or {}
 
 	while CustomHealthAPI.Helper.GetRoomForOtherKeys(player) < 0 and 
 	      CustomHealthAPI.Helper.GetTotalMaxHP(player, true) + CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true) > 0 
@@ -220,7 +238,13 @@ end
 
 function CustomHealthAPI.Helper.RestrictSoulHearts(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local otherMasks = data.OtherHealthMasks or {}
 
 	while CustomHealthAPI.Helper.GetRoomForOtherKeys(player) < 0 and 
 	      CustomHealthAPI.Helper.GetTotalSoulHP(player, true, nil, true) > 0 
@@ -256,7 +280,13 @@ end
 
 function CustomHealthAPI.Helper.RestrictHeartContainers(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local otherMasks = data.OtherHealthMasks or {}
 
 	while CustomHealthAPI.Helper.GetRoomForOtherKeys(player) < 0 and 
 	      CustomHealthAPI.Helper.GetTotalMaxHP(player, true) + CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true) > 0 
@@ -295,10 +325,16 @@ end
 
 function CustomHealthAPI.Helper.RestrictRedHearts(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
 	
 	while CustomHealthAPI.Helper.GetTotalRedHP(player, true, nil, true) > CustomHealthAPI.Helper.GetRedCapacity(player) do
-		local redMasks = data.RedHealthMasks
+		local redMasks = data.RedHealthMasks or {}
 		
 		local lowestPriorityHealth
 		local lowestPriority
@@ -369,6 +405,12 @@ end
 function CustomHealthAPI.Helper.HandleHealthOnConvertToForgotten(player, soulCharges)
 	-- convert containers to bone hearts, refund bone if necessary, give all soul hearts to subplayer (if they exist)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	
 	-- initialize subplayer
 	local subplayer = player:GetSubPlayer()
@@ -377,7 +419,7 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertToForgotten(player, soulCha
 	end
 	
 	-- give soul hearts to subplayer (or remove if no subplayer)
-	local otherMasks = data.OtherHealthMasks
+	local otherMasks = data.OtherHealthMasks or {}
 	for i = #otherMasks, 1, -1 do
 		local mask = otherMasks[i]
 		for j = #mask, 1, -1 do
@@ -447,6 +489,12 @@ end
 function CustomHealthAPI.Helper.HandleHealthOnConvertToTheSoul(player, soulCharges)
 	-- remove all containers, refund soul if necessary, give all red hearts and bone hearts + 2 to subplayer (if they exist)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	
 	-- initialize subplayer and give red hearts to them
 	local subplayer = player:GetSubPlayer()
@@ -464,7 +512,7 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertToTheSoul(player, soulCharg
 	end
 	
 	-- give bone hearts to subplayer (or remove if no subplayer) and remove containers
-	local otherMasks = data.OtherHealthMasks
+	local otherMasks = data.OtherHealthMasks or {}
 	for i = #otherMasks, 1, -1 do
 		local mask = otherMasks[i]
 		for j = #mask, 1, -1 do
@@ -515,12 +563,18 @@ end
 function CustomHealthAPI.Helper.HandleHealthOnConvertToBethany(player, soulCharges)
 	-- convert soul hearts to soul charges, refund full container if necessary
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	
 	-- clear current soul charge
 	player:AddSoulCharge(-1 * player:GetSoulCharge())
 	
 	-- convert soul hearts to soul charges
-	local otherMasks = data.OtherHealthMasks
+	local otherMasks = data.OtherHealthMasks or {}
 	for i = #otherMasks, 1, -1 do
 		local mask = otherMasks[i]
 		for j = #mask, 1, -1 do
@@ -562,12 +616,24 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertToJacobEsau(player, soulCha
 		rng:SetSeed(twin.InitSeed, 5)
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		local redMasks = data.RedHealthMasks
-		local otherMasks = data.OtherHealthMasks
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
+		local redMasks = data.RedHealthMasks or {}
+		local otherMasks = data.OtherHealthMasks or {}
 		
 		-- initialize other twin
 		CustomHealthAPI.Helper.InitializeEmptyHealthMasks(twin)
 		local tdata = CustomHealthAPI.Helper.GetSavedata(twin)
+		if not tdata then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(twin)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(twin)
+			tdata = CustomHealthAPI.Helper.GetSavedata(twin)
+		end
 		local twinRedMasks = tdata.RedHealthMasks
 		local twinOtherMasks = tdata.OtherHealthMasks
 		
@@ -915,9 +981,15 @@ end
 function CustomHealthAPI.Helper.HandleHealthOnConvertToSoulHpPlayer(player, soulCharges)
 	-- remove all containers and red, refund half a soul heart if necessary
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	
 	-- clear red hearts
-	local redMasks = data.RedHealthMasks
+	local redMasks = data.RedHealthMasks or {}
 	for i = #redMasks, 1, -1 do
 		local mask = redMasks[i]
 		for j = #mask, 1, -1 do
@@ -926,7 +998,7 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertToSoulHpPlayer(player, soul
 	end
 	
 	-- remove all containers
-	local otherMasks = data.OtherHealthMasks
+	local otherMasks = data.OtherHealthMasks or {}
 	for i = #otherMasks, 1, -1 do
 		local mask = otherMasks[i]
 		for j = #mask, 1, -1 do
@@ -962,8 +1034,14 @@ end
 
 function CustomHealthAPI.Helper.HandleHealthOnConvertToGeneric(player, soulCharges)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	-- restrict hearts
 	CustomHealthAPI.Helper.RestrictBrokenHearts(player, 12)
@@ -989,13 +1067,25 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertToGeneric(player, soulCharg
 	if subplayer then CustomHealthAPI.Helper.UpdateBasegameHealthState(subplayer) end
 end
 
-function CustomHealthAPI.Helper.HandleHealthOnConvertFromForgotten(player)
+function CustomHealthAPI.Helper.HandleHealthOnConvertFromForgotten(player, playertype)
 	local subplayer = player:GetSubPlayer()
 	if subplayer then
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
 		local sdata = CustomHealthAPI.Helper.GetSavedata(subplayer)
-		local otherMasksOfPlayer = data.OtherHealthMasks
-		local otherMasksOfSubplayer = sdata.OtherHealthMasks
+		if not sdata then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(subplayer)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(subplayer)
+			sdata = CustomHealthAPI.Helper.GetSavedata(subplayer)
+		end
+		local otherMasksOfPlayer = data.OtherHealthMasks or {}
+		local otherMasksOfSubplayer = sdata.OtherHealthMasks or {}
 		
 		--append subplayer soul hp to end of player hp (broken hearts are ignored)
 		for i = #otherMasksOfSubplayer, 1, -1 do
@@ -1028,13 +1118,25 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertFromForgotten(player)
 	end
 end
 
-function CustomHealthAPI.Helper.HandleHealthOnConvertFromTheSoul(player)
+function CustomHealthAPI.Helper.HandleHealthOnConvertFromTheSoul(player, playertype)
 	local subplayer = player:GetSubPlayer()
 	if subplayer then
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
 		local sdata = CustomHealthAPI.Helper.GetSavedata(subplayer)
-		local otherMasksOfPlayer = data.OtherHealthMasks
-		local otherMasksOfSubplayer = sdata.OtherHealthMasks
+		if not sdata then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(subplayer)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(subplayer)
+			sdata = CustomHealthAPI.Helper.GetSavedata(subplayer)
+		end
+		local otherMasksOfPlayer = data.OtherHealthMasks or {}
+		local otherMasksOfSubplayer = sdata.OtherHealthMasks or {}
 		
 		--append subplayer bone hp to end of player hp (broken hearts are ignored)
 		for i = #otherMasksOfSubplayer, 1, -1 do
@@ -1061,7 +1163,7 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertFromTheSoul(player)
 		end
 		
 		--transfer over subplayer red hp to player hp
-		data.RedHealthMasks = sdata.RedHealthMasks
+		data.RedHealthMasks = sdata.RedHealthMasks or {}
 		
 		--transfer overlays
 		CustomHealthAPI.Helper.TransferOverlays(subplayer, player)
@@ -1081,11 +1183,17 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertFromTwin(player)
 	local twin = player:GetOtherTwin()
 	if twin then
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
 		
 		local twintype = twin:GetPlayerType()
 		if twintype == PlayerType.PLAYER_KEEPER or twintype == PlayerType.PLAYER_KEEPER_B then
 			--add heart containers to player hp
-			local otherMasksOfPlayer = data.OtherHealthMasks
+			local otherMasksOfPlayer = data.OtherHealthMasks or {}
 			local emptyContainingMask = otherMasksOfPlayer[CustomHealthAPI.PersistentData.HealthDefinitions["EMPTY_HEART"].MaskIndex]
 			
 			local heartContainersToAdd = CustomHealthAPI.PersistentData.OverriddenFunctions.GetMaxHearts(twin)
@@ -1095,7 +1203,7 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertFromTwin(player)
 			end
 			
 			--add red hearts to player hp
-			local redMasksOfPlayer = data.RedHealthMasks
+			local redMasksOfPlayer = data.RedHealthMasks or {}
 			local redContainingMask = redMasksOfPlayer[CustomHealthAPI.PersistentData.HealthDefinitions["RED_HEART"].MaskIndex]
 			
 			local redHeartsToAdd = CustomHealthAPI.PersistentData.OverriddenFunctions.GetHearts(twin)
@@ -1112,14 +1220,20 @@ function CustomHealthAPI.Helper.HandleHealthOnConvertFromTwin(player)
 			--add a half soul heart to player hp
 			local remainingSoul = CustomHealthAPI.Helper.HealSoulAnywhere(player, 1)
 			if remainingSoul > 0 then
-				local otherMasksOfPlayer = data.OtherHealthMasks
+				local otherMasksOfPlayer = data.OtherHealthMasks or {}
 				local soulContainingMask = otherMasksOfPlayer[CustomHealthAPI.PersistentData.HealthDefinitions["SOUL_HEART"].MaskIndex]
 				table.insert(soulContainingMask, {Key = "SOUL_HEART", HP = 1})
 			end
 		else
 			local tdata = CustomHealthAPI.Helper.GetSavedata(twin)
-			local redMasksOfTwin = tdata.RedHealthMasks
-			local otherMasksOfTwin = tdata.OtherHealthMasks
+			if not tdata then
+				CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+				CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(twin)
+				CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(twin)
+				tdata = CustomHealthAPI.Helper.GetSavedata(twin)
+			end
+			local redMasksOfTwin = tdata.RedHealthMasks or {}
+			local otherMasksOfTwin = tdata.OtherHealthMasks or {}
 			
 			--append twin other hp to end of player other hp
 			for i = 1, #otherMasksOfTwin do

@@ -117,7 +117,7 @@ function CustomHealthAPI.Helper.CheckIfRedShouldUseCustomLogic(player, hp)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
+	local redMasks = data.RedHealthMasks or {}
 	
 	local addPriorityOfRed = CustomHealthAPI.PersistentData.HealthDefinitions["RED_HEART"].AddPriority
 	for i = 1, #redMasks do
@@ -217,7 +217,7 @@ function CustomHealthAPI.Helper.CheckIfSoulShouldUseCustomLogic(player, hp)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	local addPriorityOfSoul = CustomHealthAPI.PersistentData.HealthDefinitions["SOUL_HEART"].AddPriority
 	for i = 1, #otherMasks do
@@ -339,7 +339,7 @@ function CustomHealthAPI.Helper.CheckIfBoneShouldUseCustomLogic(player, hp)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	local addPriorityOfBone = CustomHealthAPI.PersistentData.HealthDefinitions["BONE_HEART"].AddPriority
 	for i = 1, #otherMasks do
@@ -707,8 +707,10 @@ function CustomHealthAPI.Mod:PickupCollisionCallbackHandler(pickup, collider, ..
 			return defaultResult
 		end
 		forceCollide = defaultResult.Collide
-	else
+	elseif REPENTOGON then
 		defaultResult = {}
+	else
+		defaultResult = nil
 	end
 
 	-- Run chapi's custom collision logic.

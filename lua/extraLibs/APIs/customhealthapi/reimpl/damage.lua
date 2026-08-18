@@ -145,6 +145,12 @@ function CustomHealthAPI.Mod:ProcessTakeDamageCallback(ent, amount, flags, sourc
 		                             CustomHealthAPI.Helper.GetTotalBoneHP(player, true, true)
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
 		data.HandlingDamageCanShackle = not (player:GetEffects():HasNullEffect(NullItemID.ID_SPIRIT_SHACKLES_SOUL) or 
 											 player:GetEffects():HasNullEffect(NullItemID.ID_SPIRIT_SHACKLES_DISABLED))
 		data.HandlingDamage = true
@@ -224,6 +230,12 @@ function CustomHealthAPI.Mod:HandleBloodOathCallback(ent, amount, flags, source,
 		CustomHealthAPI.Helper.ResyncHealthOfPlayer(player)
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
 		local eternalLayer = data.OverlayHealthMaskLayers[CustomHealthAPI.PersistentData.HealthDefinitions["ETERNAL_HEART"].OverlayLayerIndex]
 		local eternalMaskIdx = CustomHealthAPI.PersistentData.HealthDefinitions["ETERNAL_HEART"].MaskIndex
 		local cachedEternalMask = eternalLayer[eternalMaskIdx]
@@ -378,6 +390,12 @@ function CustomHealthAPI.Helper.FinishDamageDesync(ent)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	if data and not data.HandlingDamage then
 		CustomHealthAPI.Helper.HandleGlassCannonOnBreaking(player)
 		
@@ -589,8 +607,14 @@ function CustomHealthAPI.Helper.HandleGlassCannonOnBreaking(player)
 			--CustomHealthAPI.Helper.FinishDamageDesync(player)
 			
 			local data = CustomHealthAPI.Helper.GetSavedata(player)
-			local redMasks = data.RedHealthMasks
-			local otherMasks = data.OtherHealthMasks
+			if not data then
+				CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+				CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+				CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+				data = CustomHealthAPI.Helper.GetSavedata(player)
+			end
+			local redMasks = data.RedHealthMasks or {}
+			local otherMasks = data.OtherHealthMasks or {}
 			
 			if CustomHealthAPI.Helper.GetTotalHP(player, true) <= 0 then
 				local playerType = player:GetPlayerType()
@@ -763,6 +787,12 @@ function CustomHealthAPI.Helper.HandleEternalDamage(player, eternalOverlay, hear
 	
 	if key then
 		local data = CustomHealthAPI.Helper.GetOtherData(player)
+		if not data then
+			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+			data = CustomHealthAPI.Helper.GetSavedata(player)
+		end
 		data.DidEternalHeal = data.DidEternalHeal or {}
 		data.DidEternalHeal[key] = (data.DidEternalHeal[key] or 0) + 1
 		
@@ -804,8 +834,14 @@ end
 
 function CustomHealthAPI.Helper.GetHealthOrder(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	local redOrder = {}
 	local index = 1
@@ -871,8 +907,14 @@ end
 -- Trigger eternal heart damage if forced red would go to zero even if non lethal
 function CustomHealthAPI.Helper.GetDamageStreams(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	local healthOrder = CustomHealthAPI.Helper.GetHealthOrder(player)
 	
@@ -932,7 +974,13 @@ end
 
 function CustomHealthAPI.Helper.GetForcedRedDamageStream(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
 	
 	local normalOrder = CustomHealthAPI.Helper.GetHealthOrder(player)
 	
@@ -1048,9 +1096,15 @@ CustomHealthAPI.Enums.RunCallbackFuncs[CustomHealthAPI.Enums.Callbacks.POST_HEAL
 
 function CustomHealthAPI.Helper.DamageHealthStream(player, amount, flags, source, countdown, prioritizeEternal, healthStream, isForcedRedDamage)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
-	local overlayMaskLayers = data.OverlayHealthMaskLayers
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
+	local overlayMaskLayers = data.OverlayHealthMaskLayers or {}
 	
 	local toRemove = math.floor(amount + 0.5)
 	
@@ -1266,8 +1320,14 @@ end
 
 function CustomHealthAPI.Helper.HandleDamage(player, amount, flags, source, countdown)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	local toRemove = math.floor(amount + 0.5)
 	
 	local currentCustomRedHP = CustomHealthAPI.Helper.GetTotalRedHP(player, false, nil, true)
@@ -1440,8 +1500,14 @@ function CustomHealthAPI.Library.RemoveHealthInDamageOrder(player, amount, tryFo
 	
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	local toRemove = math.floor(amount + 0.5)
 	
 	local currentCustomRedHP = CustomHealthAPI.Helper.GetTotalRedHP(player, false, nil, true)

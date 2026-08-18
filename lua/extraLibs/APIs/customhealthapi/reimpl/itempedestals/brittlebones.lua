@@ -1,8 +1,8 @@
 function CustomHealthAPI.Helper.HandleBrittleBonesCollection(player)
 	-- convert up to 6 maxhp 0 containers to bone hearts, remove any extra, add more bone hearts if necessary to reach 6 added total
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	for i = 1, #redMasks do
 		local mask = redMasks[i]

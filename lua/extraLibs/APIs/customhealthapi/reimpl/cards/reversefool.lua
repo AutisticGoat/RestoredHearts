@@ -45,8 +45,8 @@ function CustomHealthAPI.Helper.HandleReverseFool(player)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	local redTotals = {}
 	local highestPriorityRedKey

@@ -900,7 +900,7 @@ CustomHealthAPI.Helper.HookFunctions.GetBlackHearts = function(player, ...)
 		end
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		local otherMasks = data.OtherHealthMasks
+		local otherMasks = data.OtherHealthMasks or {}
 		
 		local blackHearts = 0
 		for i = #otherMasks, 1, -1 do
@@ -1248,7 +1248,7 @@ CustomHealthAPI.Helper.HookFunctions.IsBlackHeart = function(player, heart, ...)
 		end
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		local otherMasks = data.OtherHealthMasks
+		local otherMasks = data.OtherHealthMasks or {}
 		
 		local soulHeartsToProcess = math.floor(heart / 2) + 1
 		for i = 1, #otherMasks do
@@ -1289,7 +1289,7 @@ CustomHealthAPI.Helper.HookFunctions.IsBoneHeart = function(player, heart, ...)
 		end
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		local otherMasks = data.OtherHealthMasks
+		local otherMasks = data.OtherHealthMasks or {}
 		
 		local heartsToProcess = heart + 1
 		for i = 1, #otherMasks do
@@ -1336,7 +1336,7 @@ CustomHealthAPI.Helper.HookFunctions.RemoveBlackHeart = function(player, heart, 
 		end
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		local otherMasks = data.OtherHealthMasks
+		local otherMasks = data.OtherHealthMasks or {}
 		
 		local soulHeartsToProcess = math.floor(heart / 2) + 1
 		for i = 1, #otherMasks do

@@ -11,6 +11,14 @@ end
 table.insert(CustomHealthAPI.CallbacksToRemove, CustomHealthAPI.Helper.RemoveBedSleepEffectCallback)
 
 function CustomHealthAPI.Mod:BedSleepEffectCallback(player, bed)
+	CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+	CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+	CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+	
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then 
+		return
+	end
+	
 	if CustomHealthAPI.Helper.GetHealableRedHP(player) > 0 then
 		-- full heal
 		CustomHealthAPI.Helper.UpdateHealthMasks(player, "RED_HEART", 99, true, false, false, true)

@@ -10,22 +10,21 @@ function CustomHealthAPI.Library.GetHealthBackup(p)
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
 		local subplayer = player:GetSubPlayer()
-		if p == nil or (player.Index == p.Index and player.InitSeed == p.InitSeed) then
+		if p == nil or (CustomHealthAPI.Helper.GetPlayerIndex(player) == CustomHealthAPI.Helper.GetPlayerIndex(p)) then
 			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
 			if not CustomHealthAPI.Helper.PlayerIsIgnored(player) then
 				CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
 				CustomHealthAPI.Helper.ResyncHealthOfPlayer(player)
 			end
 			savetable.Mainplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)] = {Save = CustomHealthAPI.Helper.GetSavedata(player), Persist = CustomHealthAPI.Helper.GetPersistentData(player)}
-			if p ~= nil then break end
-		end
-		if subplayer ~= nil and (p == nil or (subplayer.Index == p.Index and subplayer.InitSeed == p.InitSeed)) then
-			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(subplayer)
-			if not CustomHealthAPI.Helper.PlayerIsIgnored(player) then
-				CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(subplayer)
-				CustomHealthAPI.Helper.ResyncHealthOfPlayer(subplayer)
+			if subplayer ~= nil then
+				CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(subplayer)
+				if not CustomHealthAPI.Helper.PlayerIsIgnored(player) then
+					CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(subplayer)
+					CustomHealthAPI.Helper.ResyncHealthOfPlayer(subplayer)
+				end
+				savetable.Subplayers[CustomHealthAPI.Helper.GetPlayerIndex(subplayer)] = {Save = CustomHealthAPI.Helper.GetSavedata(subplayer), Persist = CustomHealthAPI.Helper.GetPersistentData(subplayer)}
 			end
-			savetable.Subplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)] = {Save = CustomHealthAPI.Helper.GetSavedata(subplayer), Persist = CustomHealthAPI.Helper.GetPersistentData(subplayer)}
 			if p ~= nil then break end
 		end
 	end
@@ -40,7 +39,7 @@ function CustomHealthAPI.Library.GetHealthBackup(p)
 	return backup
 end
 
-function CustomHealthAPI.Library.LoadHealthFromBackup(backup)
+function CustomHealthAPI.Library.LoadHealthFromBackup(backup,p)
 	if backup == nil then
 		return
 	end
@@ -50,23 +49,28 @@ function CustomHealthAPI.Library.LoadHealthFromBackup(backup)
 	local savetable = json.decode(backup)
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
-		local healthData = savetable.Mainplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)]
-		if healthData ~= nil then
-			CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(player, healthData)
-		end
-		
 		local subplayer = player:GetSubPlayer()
-		if subplayer ~= nil then
-			local subHealthData = savetable.Subplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)]
-			if subHealthData ~= nil then
-				CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(subplayer, subHealthData)
+		if p == nil or (CustomHealthAPI.Helper.GetPlayerIndex(player) == CustomHealthAPI.Helper.GetPlayerIndex(p)) then
+			local healthData = savetable.Mainplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)]
+			if healthData ~= nil then
+				CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(player, healthData)
 			end
+			
+			if subplayer ~= nil then
+				local subHealthData = savetable.Subplayers[CustomHealthAPI.Helper.GetPlayerIndex(player)]
+				if subHealthData ~= nil then
+					CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(subplayer, subHealthData)
+				end
+			end
+			if p ~= nil then break end
 		end
 	end
 	
-	CustomHealthAPI.PersistentData.HiddenPlayerHealthBackup = savetable.Hidden or CustomHealthAPI.PersistentData.HiddenPlayerHealthBackup
-	CustomHealthAPI.PersistentData.HiddenSubplayerHealthBackup = savetable.HiddenSub or CustomHealthAPI.PersistentData.HiddenSubplayerHealthBackup
-	CustomHealthAPI.PersistentData.RestockInfo = savetable.RestockInfo or CustomHealthAPI.PersistentData.RestockInfo
+	if p == nil then
+		CustomHealthAPI.PersistentData.HiddenPlayerHealthBackup = savetable.Hidden or CustomHealthAPI.PersistentData.HiddenPlayerHealthBackup
+		CustomHealthAPI.PersistentData.HiddenSubplayerHealthBackup = savetable.HiddenSub or CustomHealthAPI.PersistentData.HiddenSubplayerHealthBackup
+		CustomHealthAPI.PersistentData.RestockInfo = savetable.RestockInfo or CustomHealthAPI.PersistentData.RestockInfo
+	end
 end
 
 function CustomHealthAPI.Helper.LoadHealthOfPlayerFromBackup(player, healthData)

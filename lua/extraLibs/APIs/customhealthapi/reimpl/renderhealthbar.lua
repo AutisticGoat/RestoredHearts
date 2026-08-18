@@ -103,16 +103,22 @@ end
 
 function CustomHealthAPI.Helper.GetCurrentRedHealthForRendering(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	data.Cached = data.Cached or {}
 	if data.Cached.RedHealthInRender then
 		return data.Cached.RedHealthInRender
 	end
 	
-	local order = CustomHealthAPI.Helper.GetRedHealthOrder()
+	local order = CustomHealthAPI.Helper.GetRedHealthOrder() or {}
 	
 	local currentRedHealth = {}
 	for i = 1, #order do
-		local mask = CustomHealthAPI.Helper.GetRedHealthMask(player, i)
+		local mask = CustomHealthAPI.Helper.GetRedHealthMask(player, i) or {}
 		for j = 1, #mask do
 			table.insert(currentRedHealth, mask[j])
 		end
@@ -124,16 +130,22 @@ end
 
 function CustomHealthAPI.Helper.GetCurrentOtherHealthForRendering(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	data.Cached = data.Cached or {}
 	if data.Cached.OtherHealthInRender then
 		return data.Cached.OtherHealthInRender
 	end
 	
-	local order = CustomHealthAPI.Helper.GetOtherHealthOrder()
+	local order = CustomHealthAPI.Helper.GetOtherHealthOrder() or {}
 	
 	local currentOtherHealth = {}
 	for i = 1, #order do
-		local mask = CustomHealthAPI.Helper.GetOtherHealthMask(player, i)
+		local mask = CustomHealthAPI.Helper.GetOtherHealthMask(player, i) or {}
 		for j = 1, #mask do
 			table.insert(currentOtherHealth, mask[j])
 		end
@@ -146,13 +158,19 @@ end
 -- [LEGACY]
 function CustomHealthAPI.Helper.GetEternalRenderIndex(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	data.Cached = data.Cached or {}
 	if data.Cached.EternalIndex then
 		return data.Cached.EternalIndex
 	end
 	
-	local redMasks = data.RedHealthMasks
-	local otherMasks = data.OtherHealthMasks
+	local redMasks = data.RedHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks or {}
 	
 	local redOrder = {}
 	for i = 1, #redMasks do
@@ -202,6 +220,12 @@ end
 
 function CustomHealthAPI.Helper.GetOverlayRenderMasks(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	data.Cached = data.Cached or {}
 	if data.Cached.OverlayRenderMasks then
 		return data.Cached.OverlayRenderMasks
@@ -222,6 +246,12 @@ end
 -- [legacy]
 function CustomHealthAPI.Helper.GetGoldenRenderMask(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	data.Cached = data.Cached or {}
 	if data.Cached.GoldenRenderMask then
 		return data.Cached.GoldenRenderMask
@@ -306,17 +336,23 @@ function CustomHealthAPI.Helper.GetHealthBarPos(player, playerSlot, numOtherHear
 	return pos, esauFlipped
 end
 
-function CustomHealthAPI.Helper.GetHealthRenderPos(player, playerSlot, i, renderOffset, numOtherHearts, extraOffset)
+function CustomHealthAPI.Helper.GetHealthRenderPos(player, playerSlot, i, renderOffset, numOtherHearts, extraOffset, flip, scale)
 	renderOffset = renderOffset or Vector.Zero
 	extraOffset = extraOffset or Vector.Zero
 
 	local numOtherHearts = math.max(numOtherHearts or 0, 1)
 	local barPos, esauFlipped = CustomHealthAPI.Helper.GetHealthBarPos(player, playerSlot, numOtherHearts)
+	
+	local isReverse = esauFlipped
+	if flip then
+		isReverse = not isReverse
+	end
 
-	local heartDistanceX = CustomHealthAPI.Constants.HEART_PIXEL_WIDTH_DEFAULT
-	local heartDistanceY = CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT
+	scale = scale or Vector.One
+	local heartDistanceX = CustomHealthAPI.Constants.HEART_PIXEL_WIDTH_DEFAULT * scale.X
+	local heartDistanceY = CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT * scale.Y
 
-	if esauFlipped then
+	if isReverse then
 		heartDistanceX = -heartDistanceX
 		extraOffset = Vector(-extraOffset.X, extraOffset.Y)
 	end
@@ -326,14 +362,25 @@ function CustomHealthAPI.Helper.GetHealthRenderPos(player, playerSlot, i, render
 	if not REPENTANCE_PLUS and playerSlot ~= 0 and playerSlot ~= 4 then
 		numColumns = 3
 	end
+	if CustomHealthAPI.Constants.HEARTS_PER_ROW > 0 then numColumns = CustomHealthAPI.Constants.HEARTS_PER_ROW end
 	local heartOffset = Vector(heartDistanceX * (i % numColumns), heartDistanceY * math.floor(i / numColumns))
 	
-	return barPos + heartOffset + renderOffset + extraOffset, esauFlipped
+	return barPos + heartOffset + ((renderOffset + extraOffset) * scale), esauFlipped
 end
 
-function CustomHealthAPI.Helper.RenderHealth(sprite, player, playerSlot, i, renderOffset, numOtherHearts, extraOffset, ignoreEsauFlipX)
-	local renderPos, esauFlipped = CustomHealthAPI.Helper.GetHealthRenderPos(player, playerSlot, i, renderOffset, numOtherHearts, extraOffset)
-	sprite.FlipX = esauFlipped and not ignoreEsauFlipX
+function CustomHealthAPI.Helper.RenderHealth(sprite, player, playerSlot, i, renderOffset, numOtherHearts, extraOffset, ignoreEsauFlipX, flip, scale, color)
+	scale = scale or Vector.One
+
+	local renderPos, esauFlipped = CustomHealthAPI.Helper.GetHealthRenderPos(player, playerSlot, i, renderOffset, numOtherHearts, extraOffset, flip, scale)
+	
+	local flipX = esauFlipped and not ignoreEsauFlipX
+	if flip then
+		flipX = not flipX
+	end
+	sprite.FlipX = flipX
+	
+	sprite.Scale = scale
+	sprite.Color = color or sprite.Color
 	sprite:Render(renderPos, Vector.Zero, Vector.Zero)
 end
 
@@ -388,23 +435,21 @@ function CustomHealthAPI.Helper.GetLeakingHealthColor(A)
 	                  (math.sin(Game():GetFrameCount() / 9.55) + 1) / 2)
 end
 
-function CustomHealthAPI.Helper.GetHealthColor(healthDefinition, hasRedHealth, redKey, player, healthSlot, redHealthIndex, overlays, isSubPlayer)
+function CustomHealthAPI.Helper.GetHealthColor(healthDefinition, hasRedHealth, redKey, player, healthSlot, redHealthIndex, overlays, isSubPlayer, color)
 	local data = CustomHealthAPI.Helper.GetOtherData(player)
 	local shouldRedFlash = data ~= nil and data.RedFlash ~= nil and data.RedFlash > 0
 	local shouldSoulFlash = data ~= nil and data.SoulFlash ~= nil and data.SoulFlash > 0
 	
 	local A = (CustomHealthAPI.Helper.CheckFadedHealth(player, isSubPlayer) and 0.3) or 1.0
-	
-	local color = Color(1.0, 1.0, 1.0, A, 0/255, 0/255, 0/255)
+	local healthcolor = Color.Lerp(color or Color(), color or Color(), 1)
 	if CustomHealthAPI.Helper.CheckDangerHealth(player, isSubPlayer) then
 		if healthSlot == 1 then
-			color = Color.Lerp(Color(1.0, 1.0, 1.0, A, 0/255, 0/255, 0/255), 
-			                   Color(1.0, 1.0, 1.0, A, 255/255, 0/255, 0/255), 
-							   math.max(0, ((Game():GetFrameCount() % 45) - 9) / 9 * -1))
+			healthcolor.RO = math.max(0, ((Game():GetFrameCount() % 45) - 9) / 9 * -1)
 		end
 	elseif CustomHealthAPI.Helper.CheckLeakingHealth(healthDefinition, hasRedHealth, player, redHealthIndex) then
-		color = CustomHealthAPI.Helper.GetLeakingHealthColor(A)
+		healthcolor = healthcolor * CustomHealthAPI.Helper.GetLeakingHealthColor(A)
 	end
+	healthcolor.A = A * ((color and color.A) or 1)
 	
 	local flashDef = nil
 	
@@ -434,12 +479,12 @@ function CustomHealthAPI.Helper.GetHealthColor(healthDefinition, hasRedHealth, r
 	end
 	
 	if flashDef then
-		color.RO = color.RO + (flashDef.HealFlashRO or 0)
-		color.GO = color.GO + (flashDef.HealFlashGO or 0)
-		color.BO = color.BO + (flashDef.HealFlashBO or 0)
+		healthcolor.RO = healthcolor.RO + (flashDef.HealFlashRO or 0)
+		healthcolor.GO = healthcolor.GO + (flashDef.HealFlashGO or 0)
+		healthcolor.BO = healthcolor.BO + (flashDef.HealFlashBO or 0)
 	end
 	
-	return color
+	return healthcolor
 end
 
 function CustomHealthAPI.Helper.RunPreHealthRenderCallback(iter, player, playerSlot, healthIndex, renderInfo)
@@ -475,6 +520,14 @@ function CustomHealthAPI.Helper.RunPreHealthRenderCallback(iter, player, playerS
 				if ret.AnimationFrame ~= nil then
 					renderInfo.Frame = ret.AnimationFrame
 					returnTable.AnimationFrame = ret.AnimationFrame
+				end
+				if ret.Flip ~= nil then
+					renderInfo.Flip = ret.Flip
+					returnTable.Flip = ret.Flip
+				end
+				if ret.Scale ~= nil then
+					renderInfo.Scale = ret.Scale
+					returnTable.Scale = ret.Scale
 				end
 				if ret.Color ~= nil then
 					renderInfo.Color = ret.Color
@@ -526,6 +579,14 @@ function CustomHealthAPI.Helper.RunPreHealthRenderCallback(iter, player, playerS
 						if ret.AnimationFrame ~= nil then
 							renderInfo.Frame = ret.AnimationFrame
 							returnTable.AnimationFrame = ret.AnimationFrame
+						end
+						if ret.Flip ~= nil then
+							renderInfo.Flip = ret.Flip
+							returnTable.Flip = ret.Flip
+						end
+						if ret.Scale ~= nil then
+							renderInfo.Scale = ret.Scale
+							returnTable.Scale = ret.Scale
 						end
 						if ret.Color ~= nil then
 							renderInfo.Color = ret.Color
@@ -616,6 +677,12 @@ function CustomHealthAPI.Helper.RenderHealthWithCallbacks(player, playerSlot, he
 		if returnTable.Color ~= nil then
 			renderInfo.Color = returnTable.Color
 		end
+		if returnTable.Scale ~= nil then
+			renderInfo.Scale = returnTable.Scale
+		end
+		if returnTable.Flip ~= nil then
+			renderInfo.Flip = returnTable.Flip
+		end
 		if returnTable.Offset ~= nil then
 			renderInfo.ExtraOffset = returnTable.Offset
 		end
@@ -646,14 +713,14 @@ function CustomHealthAPI.Helper.RenderHealthWithCallbacks(player, playerSlot, he
 			healthSprite:Play(renderInfo.Animation, true)
 			healthSprite:SetFrame(renderInfo.Frame or 0)
 			healthSprite.Color = renderInfo.Color
-			CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset)
+			CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset, false, renderInfo.Flip, renderInfo.Scale, renderInfo.Color)
 			
 			if renderInfo.ContainerFilename and renderInfo.ContainerAnimation then
 				local containerSprite = CustomHealthAPI.Helper.GetHealthSprite(renderInfo.ContainerFilename)
 				containerSprite:Play(renderInfo.ContainerAnimation, true)
 				containerSprite:SetFrame(renderInfo.ContainerFrame or 0)
 				containerSprite.Color = renderInfo.Color
-				CustomHealthAPI.Helper.RenderHealth(containerSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset)
+				CustomHealthAPI.Helper.RenderHealth(containerSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset, false, renderInfo.Flip, renderInfo.Scale, renderInfo.Color)
 			end
 			
 			CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
@@ -669,7 +736,7 @@ function CustomHealthAPI.Helper.RenderHealthWithCallbacks(player, playerSlot, he
 	end
 end
 
-function CustomHealthAPI.Helper.RunPreRenderHeartsCallback(iter, player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer)
+function CustomHealthAPI.Helper.RunPreRenderHeartsCallback(iter, player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer, flip, scale, color)
 	local iterator = iter
 	if iterator == nil then
 		local t = Isaac.GetCallbacks(CustomHealthAPI.Enums.Callbacks.PRE_RENDER_HEARTS)
@@ -685,7 +752,7 @@ function CustomHealthAPI.Helper.RunPreRenderHeartsCallback(iter, player, playerS
 	local returnTable = {}
 	for callback in iterator do
 		if not callback.Param or callback.Param == playerType then
-			local ret = callback.Function(callback.Mod, player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer)
+			local ret = callback.Function(callback.Mod, player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer, flip, scale, color)
 			if ret ~= nil then
 				if type(ret) == "table" then
 					if ret.IndexOffset ~= nil then
@@ -707,14 +774,14 @@ function CustomHealthAPI.Helper.RunPreRenderHeartsCallback(iter, player, playerS
 end
 CustomHealthAPI.Enums.RunCallbackFuncs[CustomHealthAPI.Enums.Callbacks.PRE_RENDER_HEARTS] = CustomHealthAPI.Helper.RunPreRenderHeartsCallback
 
-function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer)
-	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then return end
+function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer, flip, scale, color)
+	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then return 0 end
 
 	local playertype = player:GetPlayerType()
 	local indexOffset = indexOffset or 0
 	local prevent = nil
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-	local returnTable = CustomHealthAPI.Helper.RunPreRenderHeartsCallback(nil, player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer)
+	local returnTable = CustomHealthAPI.Helper.RunPreRenderHeartsCallback(nil, player, playerSlot, isSubPlayer, renderOffset, indexOffset, mainPlayer, flip, scale, color)
 	if type(returnTable) == "table" then
 		if returnTable.IndexOffset ~= nil then
 			indexOffset = returnTable.IndexOffset
@@ -728,13 +795,19 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing - 1
 	if prevent then return 0 end
 
-	local currentRedHealth = CustomHealthAPI.Helper.GetCurrentRedHealthForRendering(player)
-	local currentOtherHealth = CustomHealthAPI.Helper.GetCurrentOtherHealthForRendering(player)
+	local currentRedHealth = CustomHealthAPI.Helper.GetCurrentRedHealthForRendering(player) or {}
+	local currentOtherHealth = CustomHealthAPI.Helper.GetCurrentOtherHealthForRendering(player) or {}
 	local numOtherHearts = #currentOtherHealth
 	
 	local overlayRenderMasks = CustomHealthAPI.Helper.GetOverlayRenderMasks(player)
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
+	if not data then
+		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
+		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
+		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
+		data = CustomHealthAPI.Helper.GetSavedata(player)
+	end
 	local redHealthIndex = 1
 	local otherHealthIndex = 1
 	local healthToRender = {}
@@ -825,7 +898,7 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 		end
 		
 		if animationName ~= nil then
-			local color = CustomHealthAPI.Helper.GetHealthColor(healthDefinition, hasRedHealth, redKey, player, otherHealthIndex, redHealthIndex, overlayRenderMasks[otherHealthIndex], isSubPlayer)
+			local healthcolor = CustomHealthAPI.Helper.GetHealthColor(healthDefinition, hasRedHealth, redKey, player, otherHealthIndex, redHealthIndex, overlayRenderMasks[otherHealthIndex], isSubPlayer, color)
 			local healthIndex = otherHealthIndex - 1 + indexOffset
 			local renderInfo = {
 				OtherHealth = health,
@@ -837,7 +910,9 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 				ContainerAnimation = containerAnimation,
 				ContainerFrame = 0,
 				OrderIndex = otherHealthIndex,
-				Color = Color.Lerp(color, Color(1,1,1,1,0,0,0), 0), 
+				Flip = flip,
+				Scale = scale,
+				Color = healthcolor, 
 				RenderOffset = renderOffset,
 				ExtraOffset = Vector(0,0),
 				Other = {},
@@ -868,6 +943,12 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 			end
 			if returnTable.AnimationFrame ~= nil then
 				healthToRender[i].RenderInfo.Frame = returnTable.AnimationFrame
+			end
+			if returnTable.Flip ~= nil then
+				healthToRender[i].RenderInfo.Flip = returnTable.Flip
+			end
+			if returnTable.Scale ~= nil then
+				healthToRender[i].RenderInfo.Scale = returnTable.Scale
 			end
 			if returnTable.Color ~= nil then
 				healthToRender[i].RenderInfo.Color = returnTable.Color
@@ -911,14 +992,14 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 				healthSprite:Play(renderInfo.Animation, true)
 				healthSprite:SetFrame(renderInfo.Frame or 0)
 				healthSprite.Color = renderInfo.Color
-				CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset)
+				CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset, false, renderInfo.Flip, renderInfo.Scale, renderInfo.Color)
 				
 				if renderInfo.ContainerFilename and renderInfo.ContainerAnimation then
 					local containerSprite = CustomHealthAPI.Helper.GetHealthSprite(renderInfo.ContainerFilename)
 					containerSprite:Play(renderInfo.ContainerAnimation, true)
 					containerSprite:SetFrame(renderInfo.ContainerFrame or 0)
 					containerSprite.Color = renderInfo.Color
-					CustomHealthAPI.Helper.RenderHealth(containerSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset)
+					CustomHealthAPI.Helper.RenderHealth(containerSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset, false, renderInfo.Flip, renderInfo.Scale, renderInfo.Color)
 				end
 				
 				CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
@@ -948,7 +1029,8 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 				end
 				local A = (CustomHealthAPI.Helper.CheckFadedHealth(player, isSubPlayer) and 0.3) or 1.0
 				local leaking = CustomHealthAPI.Helper.CheckLeakingHealth(overlayDef, healthToRender[i].RenderInfo.RedHealth ~= nil, player, healthToRender[i].RedHealthIndex)
-				local color = leaking and CustomHealthAPI.Helper.GetLeakingHealthColor(A) or Color(1.0, 1.0, 1.0, A, 0/255, 0/255, 0/255)
+				local healthcolor = ((leaking and CustomHealthAPI.Helper.GetLeakingHealthColor(A)) or Color()) * (color or Color())
+				healthcolor.A = A * ((color and color.A) or 1)
 				
 				local healthIndex = i - 1 + indexOffset
 				
@@ -965,7 +1047,9 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 					ContainerAnimation = nil,
 					ContainerFrame = 0,
 					OrderIndex = i,
-					Color = Color.Lerp(color, Color(1,1,1,1,0,0,0), 0), 
+					Flip = flip,
+					Scale = scale,
+					Color = healthcolor, 
 					RenderOffset = renderOffset,
 					ExtraOffset = Vector(0,0),
 					Other = {},
@@ -976,17 +1060,17 @@ function CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, i
 	end
 
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-	Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HEARTS, playertype, player, playerSlot, isSubPlayer, renderOffset, numOtherHearts - skippedIndices)
+	Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HEARTS, playertype, player, playerSlot, isSubPlayer, renderOffset, numOtherHearts - skippedIndices, renderInfo)
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing - 1
 
 	return numOtherHearts - skippedIndices
 end
 
-function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOffset)
+function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOffset, flip, scale, color)
 	local playertype = player:GetPlayerType()
 	local prevent = nil
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-	local returnTable = CustomHealthAPI.Helper.RunPreRenderHeartsCallback(nil, player, playerSlot, false, renderOffset)
+	local returnTable = CustomHealthAPI.Helper.RunPreRenderHeartsCallback(nil, player, playerSlot, false, renderOffset, nil, nil, flip, scale, color)
 	if type(returnTable) == "table" then
 		if returnTable.Prevent ~= nil then
 			prevent = returnTable.Prevent
@@ -1078,14 +1162,15 @@ function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOff
 			brokenToRender = brokenToRender - 1
 		end
 		
-		local color = CustomHealthAPI.Helper.GetHealthColor(healthDefinition, 
+		local healthcolor = CustomHealthAPI.Helper.GetHealthColor(healthDefinition, 
 		                                                    hasRedHealth, 
 		                                                    redKey, 
 		                                                    player, 
 		                                                    otherHealthIndex, 
 		                                                    redHealthIndex, 
 		                                                    isGolden, 
-		                                                    false)
+		                                                    false,
+		                                                    color)
 		local healthIndex = otherHealthIndex - 1
 		local renderInfo = {
 			OtherHealth = {Key = otherKey, HP = 0, HalfCapacity = false},
@@ -1098,7 +1183,9 @@ function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOff
 			ContainerAnimation = nil,
 			ContainerFrame = 0,
 			OrderIndex = otherHealthIndex,
-			Color = Color.Lerp(color, Color(1,1,1,1,0,0,0), 0),
+			Flip = flip,
+			Scale = scale,
+			Color = healthcolor,
 			RenderOffset = renderOffset,
 			ExtraOffset = Vector(0,0),
 			Other = {},
@@ -1132,6 +1219,12 @@ function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOff
 			end
 			if returnTable.AnimationFrame ~= nil then
 				healthToRender[i].RenderInfo.Frame = returnTable.AnimationFrame
+			end
+			if returnTable.Flip ~= nil then
+				healthToRender[i].RenderInfo.Flip = returnTable.Flip
+			end
+			if returnTable.Scale ~= nil then
+				healthToRender[i].RenderInfo.Scale = returnTable.Scale
 			end
 			if returnTable.Color ~= nil then
 				healthToRender[i].RenderInfo.Color = returnTable.Color
@@ -1175,14 +1268,14 @@ function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOff
 				healthSprite:Play(renderInfo.Animation, true)
 				healthSprite:SetFrame(renderInfo.Frame or 0)
 				healthSprite.Color = renderInfo.Color
-				CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset)
+				CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset, false, renderInfo.Flip, renderInfo.Scale, renderInfo.Color)
 				
 				if renderInfo.ContainerFilename and renderInfo.ContainerAnimation then
 					local containerSprite = CustomHealthAPI.Helper.GetHealthSprite(renderInfo.ContainerFilename)
 					containerSprite:Play(renderInfo.ContainerAnimation, true)
 					containerSprite:SetFrame(renderInfo.ContainerFrame or 0)
 					containerSprite.Color = renderInfo.Color
-					CustomHealthAPI.Helper.RenderHealth(containerSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset)
+					CustomHealthAPI.Helper.RenderHealth(containerSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, renderInfo.ExtraOffset, false, renderInfo.Flip, renderInfo.Scale, renderInfo.Color)
 				end
 				
 				CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
@@ -1216,7 +1309,9 @@ function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOff
 					ContainerAnimation = nil,
 					ContainerFrame = 0,
 					OrderIndex = i,
-					Color = Color(1.0, 1.0, 1.0, 1.0, 0/255, 0/255, 0/255), 
+					Flip = flip,
+					Scale = scale,
+					Color = color or Color(1.0, 1.0, 1.0, 1.0, 0/255, 0/255, 0/255), 
 					RenderOffset = renderOffset,
 					ExtraOffset = Vector(0,0),
 					Other = {},
@@ -1228,7 +1323,7 @@ function CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOff
 	end
 	
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-	Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HEARTS, playertype, player, playerSlot, false, renderOffset, numOtherHearts)
+	Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HEARTS, playertype, player, playerSlot, false, renderOffset, numOtherHearts, renderInfo)
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing - 1
 	
 	return numKeys - skippedIndices
@@ -1265,6 +1360,10 @@ function CustomHealthAPI.Helper.RunPreRenderUnknownCurseCallback(iter, player, p
 						renderInfo.Color = ret.Color
 						returnTable.Color = ret.Color
 					end
+					if ret.Scale ~= nil then
+						renderInfo.Scale = ret.Scale
+						returnTable.Scale = ret.Scale
+					end
 					if ret.Offset ~= nil then
 						renderInfo.RenderOffset = ret.Offset
 						returnTable.Offset = ret.Offset
@@ -1284,11 +1383,13 @@ function CustomHealthAPI.Helper.RunPreRenderUnknownCurseCallback(iter, player, p
 end
 CustomHealthAPI.Enums.RunCallbackFuncs[CustomHealthAPI.Enums.Callbacks.PRE_RENDER_UNKNOWN_CURSE] = CustomHealthAPI.Helper.RunPreRenderUnknownCurseCallback
 
-function CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, renderOffset)
+function CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, renderOffset, flip, scale, color)
 	local renderInfo = {
 		Filename = (CustomHealthAPI.REPPLUS_V1_9_7_13 and "gfx/ui/CustomHealthAPI/hearts_v2.anm2") or "gfx/ui/CustomHealthAPI/hearts.anm2", 
 		Animation = "CurseHeart",
-		Color = Color(1.0, 1.0, 1.0, 1.0, 0/255, 0/255, 0/255),
+		Flip = flip,
+		Scale = scale,
+		Color = color or Color(1.0, 1.0, 1.0, 1.0, 0/255, 0/255, 0/255),
 		RenderOffset = renderOffset,
 		Other = {},
 	}
@@ -1308,6 +1409,12 @@ function CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, rend
 		if returnTable.Color ~= nil then
 			renderInfo.Color = returnTable.Color
 		end
+		if returnTable.Scale ~= nil then
+			renderInfo.Scale = returnTable.Scale
+		end
+		if returnTable.Flip ~= nil then
+			renderInfo.Flip = returnTable.Flip
+		end
 		if returnTable.Offset ~= nil then
 			renderInfo.RenderOffset = returnTable.Offset
 		end
@@ -1325,7 +1432,7 @@ function CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, rend
 		healthSprite.Color = renderInfo.Color
 	
 		if not prevent then
-			CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, 0, renderInfo.RenderOffset, 1, nil, true)
+			CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, 0, renderInfo.RenderOffset, 1, nil, true, flip, scale, color)
 			
 			CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
 			Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_UNKNOWN_CURSE, playertype, player, playerSlot, renderInfo)
@@ -1340,7 +1447,7 @@ function CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, rend
 end
 
 -- Deprecated
-function CustomHealthAPI.Helper.RenderHolyMantle(player, playerSlot, renderOffset, heartsRenderedOffset)
+function CustomHealthAPI.Helper.RenderHolyMantle(player, playerSlot, renderOffset, heartsRenderedOffset, flip, scale, color)
 	local numKeys, keyLimit
 	if CustomHealthAPI.Helper.PlayerHasCoinHealth(player) then
 		numKeys = math.min(24, math.ceil(CustomHealthAPI.PersistentData.OverriddenFunctions.GetMaxHearts(player) / 2) +
@@ -1354,7 +1461,7 @@ function CustomHealthAPI.Helper.RenderHolyMantle(player, playerSlot, renderOffse
 		keyLimit = math.ceil(CustomHealthAPI.Helper.GetTrueHeartLimit(player) / 2)
 	end
 	numKeys = math.max(numKeys, 0)
-	return CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, numKeys)
+	return CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, numKeys, flip, scale, color)
 end
 
 function CustomHealthAPI.Helper.RunPreAfterHealthIconRenderCallback(iter, player, key, playerSlot, index, indexOffset, renderInfo)
@@ -1380,6 +1487,18 @@ function CustomHealthAPI.Helper.RunPreAfterHealthIconRenderCallback(iter, player
 						indexOffset = ret.IndexOffset
 						returnTable.IndexOffset = ret.IndexOffset
 					end
+					if ret.Flip ~= nil then
+						renderInfo.Flip = ret.Flip
+						returnTable.Flip = ret.Flip
+					end
+					if ret.Scale ~= nil then
+						renderInfo.Scale = ret.Scale
+						returnTable.Scale = ret.Scale
+					end
+					if ret.Color ~= nil then
+						renderInfo.Color = ret.Color
+						returnTable.Color = ret.Color
+					end
 					if ret.Offset ~= nil then
 						renderInfo.ExtraOffset = ret.Offset
 						returnTable.Offset = ret.Offset
@@ -1399,7 +1518,7 @@ function CustomHealthAPI.Helper.RunPreAfterHealthIconRenderCallback(iter, player
 end
 CustomHealthAPI.Enums.RunCallbackFuncs[CustomHealthAPI.Enums.Callbacks.PRE_AFTER_HEALTH_ICON_RENDER] = CustomHealthAPI.Helper.RunPreAfterHealthIconRenderCallback
 
-function CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered)
+function CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered, flip, scale, color)
 	local index = totalHealthRendered
 	if CustomHealthAPI.Helper.CheckFadedHealth(player, isSubPlayer) then
 		index = 0
@@ -1414,6 +1533,7 @@ function CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, rende
 	if not REPENTANCE_PLUS and playerSlot ~= 0 and playerSlot ~= 4 then
 		numColumns = 3
 	end
+	if CustomHealthAPI.Constants.HEARTS_PER_ROW > 0 then numColumns = CustomHealthAPI.Constants.HEARTS_PER_ROW end
 	if index >= keyLimit and index % numColumns == 0 then
 		index = index - 1
 		offsetedBy = offsetedBy + 1
@@ -1429,6 +1549,9 @@ function CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, rende
 			if healthDefinition.ShouldRenderFunc(player) then
 				local indexOffset = 0
 				local renderInfo = {
+					Flip = flip,
+					Scale = scale,
+					Color = color or Color(1.0, 1.0, 1.0, 1.0, 0/255, 0/255, 0/255), 
 					RenderOffset = renderOffset, 
 					ExtraOffset = Vector(0,0), 
 					TotalHealthRendered = totalHealthRendered,
@@ -1440,6 +1563,15 @@ function CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, rende
 				if type(returnTable) == "table" then
 					if returnTable.IndexOffset ~= nil then
 						indexOffset = returnTable.IndexOffset
+					end
+					if returnTable.Flip ~= nil then
+						renderInfo.Flip = returnTable.Flip
+					end
+					if returnTable.Scale ~= nil then
+						renderInfo.Scale = returnTable.Scale
+					end
+					if returnTable.Color ~= nil then
+						renderInfo.Color = returnTable.Color
 					end
 					if returnTable.Offset ~= nil then
 						renderInfo.ExtraOffset = returnTable.Offset
@@ -1480,10 +1612,6 @@ function CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, rende
 	
 	return totalIconsRendered, totalIconsOffset
 end
-
-local livesFont = Font()
-livesFont:Load("font/pftempestasevencondensed.fnt")
-local livesFontColor = KColor(1,1,1,1)
 
 function CustomHealthAPI.Helper.RunPreRenderLivesCallback(iter, player, numLives, isChance, ignoredHealth)
 	local iterator = iter
@@ -1532,17 +1660,22 @@ function CustomHealthAPI.Helper.RunPreRenderLivesCallback(iter, player, numLives
 end
 CustomHealthAPI.Enums.RunCallbackFuncs[CustomHealthAPI.Enums.Callbacks.PRE_RENDER_LIVES] = CustomHealthAPI.Helper.RunPreRenderLivesCallback
 
-function CustomHealthAPI.Helper.RenderLives(player, playerSlot, renderOffset, totalHealthRendered, numRowsRendered, numColumnsRendered)
+function CustomHealthAPI.Helper.RenderLives(player, playerSlot, renderOffset, totalHealthRendered, numRowsRendered, numColumnsRendered, flip, scale, color)
 	if not REPENTANCE_PLUS and (playerSlot == 1 or playerSlot == 2 or playerSlot == 3 or playerSlot == -1) then -- Players 2-4 + Soulstones / Strawman / etc.
 		-- i'm actually surprised to see they don't render extra lives in basegame not gonna lie
 		return
 	end
 	
+	renderOffset = renderOffset or Vector.Zero
+	scale = scale or Vector.One
+	color = color or KColor.White
+	if not color.Alpha then color = KColor(color.R,color.G,color.B,color.A) end
+	
 	local game = Game()
 	local bottomRight = game:GetRoom():GetRenderSurfaceTopLeft() * 2 + Vector(442,286) -- thank-q stageapi
 	local hudOffset = Options.HUDOffset * 10
-	local heartDistanceX = CustomHealthAPI.Constants.HEART_PIXEL_WIDTH_DEFAULT
-	local heartDistanceY = CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT
+	local heartDistanceX = CustomHealthAPI.Constants.HEART_PIXEL_WIDTH_DEFAULT * scale.X
+	local heartDistanceY = CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT * scale.Y
 
 	local numLives = player:GetExtraLives()
 	local isChance = false
@@ -1603,7 +1736,7 @@ function CustomHealthAPI.Helper.RenderLives(player, playerSlot, renderOffset, to
 	if numLives <= 0 and not overrideLivesCheck then
 		return
 	end
-	local livesString = "x" .. numLives .. ((isChance and "?") or "")
+	local livesString = (flip and (numLives .. ((isChance and "?") or "") .. "x")) or ("x" .. numLives .. ((isChance and "?") or ""))
 	
 	local numRows = math.max(0, numRowsRendered - 1) / 2
 	local numColumns = numColumnsRendered
@@ -1611,7 +1744,7 @@ function CustomHealthAPI.Helper.RenderLives(player, playerSlot, renderOffset, to
 	local pos, esauFlipped = CustomHealthAPI.Helper.GetHealthBarPos(player, playerSlot, totalHealthRendered)
 	
 	if esauFlipped then
-		local livesStringWidth = livesFont:GetStringWidth(livesString)
+		local livesStringWidth = CustomHealthAPI.Constants.FONT:GetStringWidth(livesString)
 		pos = pos + Vector(-4 + math.floor(hudOffset * 1.6 + 0.5) - livesStringWidth - heartDistanceX * numColumns,
 		                   -10 + math.floor(hudOffset * 1.2 + 0.5) / 2 + 8 * numRows)
 		if REPENTANCE_PLUS then
@@ -1621,9 +1754,9 @@ function CustomHealthAPI.Helper.RenderLives(player, playerSlot, renderOffset, to
 		pos = pos + Vector(-2 + heartDistanceX * numColumns,
 		                   -8 + 8 * numRows)
 	end
-	pos = pos + renderOffset + game.ScreenShakeOffset
+	pos = pos + (renderOffset * scale) + game.ScreenShakeOffset
 	
-	livesFont:DrawString(livesString, pos.X, pos.Y, livesFontColor)
+	CustomHealthAPI.Constants.FONT:DrawStringScaled(livesString, pos.X, pos.Y, scale.X, scale.Y, color, 0, true)
 	
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
 	Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_LIVES, playertype, player, pos, numLives, isChance, livesString)
@@ -1693,7 +1826,7 @@ function CustomHealthAPI.Helper.GetBelowHealthIconsToRender(player, playerSlot, 
 	return belowHealthIconsToRender, rowsUsed
 end
 
-function CustomHealthAPI.Helper.RenderBelowHealthIcons(player, playerSlot, renderOffset, belowHealthIconsToRender, totalHealthRendered, totalRowsRendered, isUnknownCurse, keyLimitOverride)
+function CustomHealthAPI.Helper.RenderBelowHealthIcons(player, playerSlot, renderOffset, belowHealthIconsToRender, totalHealthRendered, totalRowsRendered, isUnknownCurse, keyLimitOverride, flip, scale, color)
 	local maxColumns = 6
 	if not REPENTANCE_PLUS and playerSlot ~= 0 and playerSlot ~= 4 then
 		maxColumns = 3
@@ -1746,6 +1879,9 @@ function CustomHealthAPI.Helper.RenderBelowHealthIcons(player, playerSlot, rende
 
 		local rowOffset = 0
 		local renderInfo = {
+			Flip = flip,
+			Scale = scale,
+			Color = color,
 			RenderOffset = renderOffset, 
 			ExtraOffset = Vector(0,0), 
 			TotalHealthRendered = totalHealthRendered,
@@ -1757,6 +1893,15 @@ function CustomHealthAPI.Helper.RenderBelowHealthIcons(player, playerSlot, rende
 		if type(returnTable) == "table" then
 			if returnTable.Row ~= nil then
 				rowOffset = returnTable.Row - (index / maxColumns)
+			end
+			if returnTable.Flip ~= nil then
+				renderInfo.Flip = returnTable.Flip
+			end
+			if returnTable.Scale ~= nil then
+				renderInfo.Scale = returnTable.Scale
+			end
+			if returnTable.Color ~= nil then
+				renderInfo.Color = returnTable.Color
 			end
 			if returnTable.Offset ~= nil then
 				renderInfo.ExtraOffset = returnTable.Offset
@@ -1788,7 +1933,7 @@ function CustomHealthAPI.Helper.RenderBelowHealthIcons(player, playerSlot, rende
 	return currentRow
 end
 
-function CustomHealthAPI.Helper.RunPreRenderHpBarCallback(iter, player, playerSlot, renderOffset)
+function CustomHealthAPI.Helper.RunPreRenderHpBarCallback(iter, player, playerSlot, renderOffset, flip)
 	local iterator = iter
 	if iterator == nil then
 		local t = Isaac.GetCallbacks(CustomHealthAPI.Enums.Callbacks.PRE_RENDER_HP_BAR)
@@ -1804,7 +1949,7 @@ function CustomHealthAPI.Helper.RunPreRenderHpBarCallback(iter, player, playerSl
 	local returnTable = {}
 	for callback in iterator do
 		if not callback.Param or callback.Param == playerType then
-			local ret = callback.Function(callback.Mod, player, playerSlot, renderOffset)
+			local ret = callback.Function(callback.Mod, player, playerSlot, renderOffset, flip)
 			if ret ~= nil then
 				if type(ret) == "table" then
 					if ret.PlayerSlot ~= nil then
@@ -1814,6 +1959,10 @@ function CustomHealthAPI.Helper.RunPreRenderHpBarCallback(iter, player, playerSl
 					if ret.Offset ~= nil then
 						renderOffset = ret.Offset
 						returnTable.Offset = ret.Offset
+					end
+					if ret.Flip ~= nil then
+						flip = ret.Flip
+						returnTable.Flip = ret.Flip
 					end
 					if ret.Prevent ~= nil then
 						returnTable.Prevent = ret.Prevent
@@ -1830,7 +1979,7 @@ function CustomHealthAPI.Helper.RunPreRenderHpBarCallback(iter, player, playerSl
 end
 CustomHealthAPI.Enums.RunCallbackFuncs[CustomHealthAPI.Enums.Callbacks.PRE_RENDER_HP_BAR] = CustomHealthAPI.Helper.RunPreRenderHpBarCallback
 
-function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, renderOffset, renderingThroughTwin)
+function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, renderOffset, renderingThroughTwin, ignoreCurse, flip, scale, color)
 	local player = truePlayer	
 	local playertype = player:GetPlayerType()
 	if not renderingThroughTwin and CustomHealthAPI.PersistentData.RenderTwinBelowMain[playertype] then
@@ -1842,16 +1991,21 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 		end
 	end
 	
-	local hasUnknownCurse = Game():GetLevel():GetCurses() & LevelCurse.CURSE_OF_THE_UNKNOWN ~= 0
+	local hasUnknownCurse = not ignoreCurse and Game():GetLevel():GetCurses() & LevelCurse.CURSE_OF_THE_UNKNOWN ~= 0
 	local playerSlot = playerSlot
 	local renderOffset = renderOffset or Vector.Zero
+	local scale = scale or Vector.One
+	local color = color or Color()
 	if not hasUnknownCurse then
 		local prevent = nil
 		CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-		local returnTable = CustomHealthAPI.Helper.RunPreRenderHpBarCallback(nil, player, playerSlot, renderOffset)
+		local returnTable = CustomHealthAPI.Helper.RunPreRenderHpBarCallback(nil, player, playerSlot, renderOffset, flip, scale, color)
 		if type(returnTable) == "table" then
 			playerSlot = returnTable.PlayerSlot or playerSlot
 			renderOffset = returnTable.Offset or renderOffset
+			flip = returnTable.Flip or flip
+			scale = returnTable.Scale or scale
+			color = returnTable.Color or color
 			if returnTable.Prevent ~= nil then
 				prevent = returnTable.Prevent
 			end
@@ -1866,6 +2020,7 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 	if not REPENTANCE_PLUS and playerSlot ~= 0 and playerSlot ~= 4 then
 		maxColumns = 3
 	end
+	if CustomHealthAPI.Constants.HEARTS_PER_ROW > 0 then maxColumns = CustomHealthAPI.Constants.HEARTS_PER_ROW end
 	local isFadedHealth = CustomHealthAPI.Helper.CheckFadedHealth(player, false)
 	local onBottomOfScreen = playerSlot > 0 and (playerSlot % 4 == 2 or playerSlot % 4 == 3 or (playerSlot % 4 == 0 and not (REPENTANCE_PLUS and CustomHealthAPI.PersistentData.NumOccupiedPlayerHUDs > 3)))
 
@@ -1876,7 +2031,7 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 	
 	local belowHealthIconsToRender, belowHealthRows = {}, 0
 	if not renderingThroughTwin then
-		belowHealthIconsToRender, belowHealthRows = CustomHealthAPI.Helper.GetBelowHealthIconsToRender(player, playerSlot, isUnknownCurse)
+		belowHealthIconsToRender, belowHealthRows = CustomHealthAPI.Helper.GetBelowHealthIconsToRender(player, playerSlot, hasUnknownCurse)
 		local doExtraBelowHealthOffset = false
 		for _, key in ipairs(belowHealthIconsToRender) do
 			local healthDefinition = CustomHealthAPI.PersistentData.HealthDefinitions[key]
@@ -1925,19 +2080,19 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 				end
 			end
 			
-			renderOffset = renderOffset - Vector(0, CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT * math.max(0, numRows - 2) + ((belowHealthRows > 0 and doExtraBelowHealthOffset and 2) or 0))
+			renderOffset = renderOffset - Vector(0, CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT * scale.Y * math.max(0, numRows - 2) + ((belowHealthRows > 0 and doExtraBelowHealthOffset and 2) or 0))
 		end
 	end
 	
 	local totalHealthRendered, totalIconsRendered, totalIconsOffset = 0, 0, 0
 	local numRowsRendered, numColumnsRendered = 0, 0
 	if hasUnknownCurse then
-		CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, renderOffset)
+		CustomHealthAPI.Helper.RenderCurseOfTheUnknown(player, playerSlot, renderOffset, flip, scale, color)
 		numRowsRendered = 1
 		numColumnsRendered = 1
 	elseif CustomHealthAPI.Helper.PlayerHasCoinHealth(player) then
-		totalHealthRendered = CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOffset)
-		totalIconsRendered, totalIconsOffset = CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered)
+		totalHealthRendered = CustomHealthAPI.Helper.RenderKeeperHealth(player, playerSlot, renderOffset, flip, scale, color)
+		totalIconsRendered, totalIconsOffset = CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered, flip, scale, color)
 		
 		numRowsRendered = math.max(0, math.ceil((totalHealthRendered + totalIconsRendered - totalIconsOffset) / maxColumns))
 		numColumnsRendered = math.max(0, math.min(totalHealthRendered + totalIconsRendered - totalIconsOffset, maxColumns) + totalIconsOffset)
@@ -1951,7 +2106,7 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 			numColumnsRendered = math.max(fadedColumnsRendered, unfadedColumnsRendered)
 		end
 	elseif CustomHealthAPI.Helper.PlayerIsHealthless(player, true) then
-		totalIconsRendered, totalIconsOffset = CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered)
+		totalIconsRendered, totalIconsOffset = CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered, flip, scale, color)
 		
 		numRowsRendered = math.max(0, math.ceil((totalHealthRendered + totalIconsRendered - totalIconsOffset) / maxColumns))
 		numColumnsRendered = math.max(0, math.min(totalHealthRendered + totalIconsRendered - totalIconsOffset, maxColumns) + totalIconsOffset)
@@ -1968,8 +2123,8 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 		--do nothing
 		return false, 0, 0
 	else
-		totalHealthRendered = CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, false, renderOffset)
-		totalIconsRendered, totalIconsOffset = CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered)
+		totalHealthRendered = CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(player, playerSlot, false, renderOffset, nil, nil, flip, scale, color)
+		totalIconsRendered, totalIconsOffset = CustomHealthAPI.Helper.RenderAfterHealthIcons(player, playerSlot, renderOffset, totalHealthRendered, flip, scale, color)
 		
 		numRowsRendered = math.max(0, math.ceil((totalHealthRendered + totalIconsRendered - totalIconsOffset) / maxColumns))
 		numColumnsRendered = math.max(0, math.min(totalHealthRendered + totalIconsRendered - totalIconsOffset, maxColumns) + totalIconsOffset)
@@ -1987,7 +2142,7 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 		if subPlayer ~= nil	then
 			shouldQueueRenders = false
 			
-			local totalSubHealthRendered = CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(subPlayer, playerSlot, true, renderOffset, numRowsRendered * maxColumns, player)
+			local totalSubHealthRendered = CustomHealthAPI.Helper.RenderCustomHealthOfPlayer(subPlayer, playerSlot, true, renderOffset, numRowsRendered * maxColumns, player, flip, scale, color)
 			local numSubRowsRendered = math.max(0, math.ceil(totalSubHealthRendered / maxColumns))
 			local numSubColumnsRendered = math.max(0, math.min(totalSubHealthRendered, maxColumns))
 			numRowsRendered = numRowsRendered + numSubRowsRendered
@@ -2011,7 +2166,7 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 									 Vector(0, CustomHealthAPI.Constants.HEART_PIXEL_HEIGHT_DEFAULT * math.max(numRowsRendered, math.ceil(keyLimit / maxColumns))) +
 									 (CustomHealthAPI.PersistentData.TwinRenderOffset[playertype] or Vector(0,0))
 			
-			local _, numTwinRowsRendered, numTwinColumnsRendered = CustomHealthAPI.Helper.RenderPlayerHPBar(twin, playerSlot, twinRenderOffset, true)
+			local _, numTwinRowsRendered, numTwinColumnsRendered = CustomHealthAPI.Helper.RenderPlayerHPBar(twin, playerSlot, twinRenderOffset, true, ignoreCurse, flip, scale, color)
 			if numTwinColumnsRendered >= numColumnsRendered then
 				renderOffsetFromTwin = Vector(math.max(0, (CustomHealthAPI.PersistentData.TwinRenderOffset[playertype] or Vector(0,0)).X), 0)
 			end
@@ -2035,16 +2190,16 @@ function CustomHealthAPI.Helper.RenderPlayerHPBar(truePlayer, playerSlot, render
 	end
 	
 	if REPENTOGON and not (hasUnknownCurse or renderingThroughTwin) then
-		CustomHealthAPI.Helper.RenderLives(truePlayer, playerSlot, renderOffset + renderOffsetFromTwin, totalHealthRendered, numRowsRendered, numColumnsRendered) 
+		CustomHealthAPI.Helper.RenderLives(truePlayer, playerSlot, renderOffset + renderOffsetFromTwin, totalHealthRendered, numRowsRendered, numColumnsRendered, flip, scale, color) 
 	end
 	
 	if not renderingThroughTwin then
-		numRowsRendered = CustomHealthAPI.Helper.RenderBelowHealthIcons(truePlayer, playerSlot, renderOffset, belowHealthIconsToRender, totalHealthRendered, numRowsRendered, hasUnknownCurse, keyLimitOverride)
+		numRowsRendered = CustomHealthAPI.Helper.RenderBelowHealthIcons(truePlayer, playerSlot, renderOffset, belowHealthIconsToRender, totalHealthRendered, numRowsRendered, hasUnknownCurse, keyLimitOverride, flip, scale, color)
 	end
 
 	if not hasUnknownCurse then
 		CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-		Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HP_BAR, playertype, player, playerSlot, renderOffset, totalHealthRendered)
+		Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HP_BAR, playertype, player, playerSlot, renderOffset, totalHealthRendered, flip, scale, color)
 		CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing - 1
 	end
 

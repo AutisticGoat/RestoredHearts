@@ -1,10 +1,13 @@
--- sorry for the lack of documentation atm
--- this isn't version 1.0 for a reason
+local version = 0.967
 
-local version = 0.965
-local root = "lua.extraLibs.APIs.customhealthapi." 
+local root = "lua.extraLibs.APIs.customhealthapi."
 local modname = "Custom Health API (Restored Hearts)"
 local modinitials = "RMRH"
+
+-- Example of above (from Fiend Folio):
+-- local root = "ffscripts.customhealthapi."
+-- local modname = "Custom Health API (Fiend Folio)"
+-- local modinitials = "FF"
 
 CustomHealthAPI = CustomHealthAPI or {}
 
