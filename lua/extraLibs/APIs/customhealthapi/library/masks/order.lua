@@ -79,8 +79,8 @@ function CustomHealthAPI.Library.GetHealthInOrder(player, ignoreResyncing, ignor
 		return data.Cached.HealthInOrder
 	end
 	
-	local redMasks = data.RedHealthMasks or {}
-	local otherMasks = data.OtherHealthMasks or {}
+	local redMasks = data.RedHealthMasks
+	local otherMasks = data.OtherHealthMasks
 	
 	local redOrder = {}
 	for i = 1, #redMasks do

@@ -1,6 +1,6 @@
 function CustomHealthAPI.Helper.HandleReverseSun(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	
 	local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions["BONE_HEART"].MaskIndex
 	local boneContainingMask = otherMasks[maskIndex]
@@ -39,7 +39,7 @@ function CustomHealthAPI.Helper.HandleReverseSunSyncing(player)
 	if data.HasReverseSun then
 		local effects = player:GetEffects()
 		if not effects:HasNullEffect(NullItemID.ID_REVERSE_SUN) then
-			local otherMasks = data.OtherHealthMasks or {}
+			local otherMasks = data.OtherHealthMasks
 			
 			local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions["BONE_HEART"].MaskIndex
 			local boneContainingMask = otherMasks[maskIndex]

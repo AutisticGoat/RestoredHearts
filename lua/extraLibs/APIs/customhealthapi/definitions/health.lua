@@ -152,7 +152,7 @@ CustomHealthAPI.Library.RegisterHealthOverlay("GOLDEN_HEART",
 	 CollectSound = SoundEffect.SOUND_GOLD_HEART,
 	 IgnoreBleeding = true})
 
-function CustomHealthAPI.Helper.RunPreRenderHolyMantleCallback(iter, player, healthIndex, extraOffset, flip, scale, color)
+function CustomHealthAPI.Helper.RunPreRenderHolyMantleCallback(iter, player, healthIndex, extraOffset)
 	local iterator = iter
 	if iterator == nil then
 		local t = Isaac.GetCallbacks(CustomHealthAPI.Enums.Callbacks.PRE_RENDER_HOLY_MANTLE)
@@ -168,7 +168,7 @@ function CustomHealthAPI.Helper.RunPreRenderHolyMantleCallback(iter, player, hea
 	local returnTable = {}
 	for callback in iterator do
 		if not callback.Param or callback.Param == playerType then
-			local ret = callback.Function(callback.Mod, player, healthIndex, extraOffset, flip, scale, color)
+			local ret = callback.Function(callback.Mod, player, healthIndex, extraOffset)
 			if ret ~= nil then
 				if ret.Index ~= nil then
 					healthIndex = ret.Index
@@ -183,12 +183,6 @@ function CustomHealthAPI.Helper.RunPreRenderHolyMantleCallback(iter, player, hea
 				end
 				if ret.AnimationName ~= nil then
 					returnTable.AnimationName = ret.AnimationName
-				end
-				if ret.Scale ~= nil then
-					returnTable.Scale = ret.Scale
-				end
-				if ret.Flip ~= nil then
-					returnTable.Flip = ret.Flip
 				end
 				if ret.Color ~= nil then
 					returnTable.Color = ret.Color
@@ -257,10 +251,7 @@ CustomHealthAPI.Library.RegisterAfterHealthIcon("HOLY_MANTLE",
 		for i = math.min(#mantlesToRender, numMantlesToRender), 1, -1 do
 			local filename = mantlesToRender[i].Filename
 			local animname = mantlesToRender[i].Animname
-			local color = renderInfo.Color or Color()
-			color.A = ((renderInfo.Color and renderInfo.Color.A) or 1) / i
-			local scale = renderInfo.Scale or Vector.One
-			local flip = renderInfo.Flip
+			local color = Color(1.0, 1.0, 1.0, 1.0 / i, 0/255, 0/255, 0/255)
 			
 			local prevent = false
 			local healthIndex = healthIndex
@@ -270,7 +261,7 @@ CustomHealthAPI.Library.RegisterAfterHealthIcon("HOLY_MANTLE",
 			end
 			
 			CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
-			local returnTable = CustomHealthAPI.Helper.RunPreRenderHolyMantleCallback(nil, player, healthIndex, extraOffset, flip, scale, color)
+			local returnTable = CustomHealthAPI.Helper.RunPreRenderHolyMantleCallback(nil, player, healthIndex, extraOffset)
 			if returnTable.Index ~= nil then
 				healthIndex = returnTable.Index
 			end
@@ -286,12 +277,6 @@ CustomHealthAPI.Library.RegisterAfterHealthIcon("HOLY_MANTLE",
 			if returnTable.Color ~= nil then
 				color = returnTable.Color
 			end
-			if returnTable.Scale ~= nil then
-				scale = returnTable.Scale
-			end
-			if returnTable.Flip ~= nil then
-				flip = returnTable.Flip
-			end
 			if returnTable.Prevent == true then
 				prevent = true
 				break
@@ -303,7 +288,7 @@ CustomHealthAPI.Library.RegisterAfterHealthIcon("HOLY_MANTLE",
 			healthSprite.Color = color
 			
 			if not prevent then
-				CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, extraOffset, false, flip, scale, color)
+				CustomHealthAPI.Helper.RenderHealth(healthSprite, player, playerSlot, healthIndex, renderInfo.RenderOffset, renderInfo.TotalHealthRendered, extraOffset)
 				
 				CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
 				Isaac.RunCallbackWithParam(CustomHealthAPI.Enums.Callbacks.POST_RENDER_HOLY_MANTLE, player:GetPlayerType(), player, playerSlot, healthIndex)

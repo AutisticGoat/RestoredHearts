@@ -136,7 +136,6 @@ function CustomHealthAPI.Library.RegisterRedHealth(key, info)
 	end
 	
 	CustomHealthAPI.Helper.InitializeRedHealthOrder()
-	table.insert(CustomHealthAPI.Constants.Health.RED,key)
 end
 
 function CustomHealthAPI.Library.RegisterSoulHealth(key, info)
@@ -200,7 +199,6 @@ function CustomHealthAPI.Library.RegisterSoulHealth(key, info)
 	end
 	
 	CustomHealthAPI.Helper.InitializeOtherHealthOrder()
-	table.insert(CustomHealthAPI.Constants.Health.SOUL,key)
 end
 
 function CustomHealthAPI.Library.RegisterHealthContainer(key, info)
@@ -280,7 +278,6 @@ function CustomHealthAPI.Library.RegisterHealthContainer(key, info)
 	end
 	
 	CustomHealthAPI.Helper.InitializeOtherHealthOrder()
-	table.insert(CustomHealthAPI.Constants.Health.CONTAINER,key)
 end
 
 function CustomHealthAPI.Library.RegisterHealthOverlay(key, info)
@@ -354,7 +351,6 @@ function CustomHealthAPI.Library.RegisterHealthOverlay(key, info)
 	end
 	
 	CustomHealthAPI.Helper.InitializeOverlayHealthLayerOrders()
-	table.insert(CustomHealthAPI.Constants.Health.OVERLAY,key)
 end
 
 function CustomHealthAPI.Library.RegisterAfterHealthIcon(key, info)
@@ -452,50 +448,6 @@ function CustomHealthAPI.Library.GetInfoOfHealth(health, var)
 		return CustomHealthAPI.Library.GetInfoOfKey(health.Key, var)
 	end
 	return nil
-end
-
--- Just adding this for consistency so outside users that don't want to call the table can call this
-function CustomHealthAPI.Library.GetHealthDefinition(key)
-	return CustomHealthAPI.PersistentData.HealthDefinitions[key]
-end
-
--- Requires an EntityPickup, and returns the CHAPI Health key if the entity is a registered heart
-function CustomHealthAPI.Library.GetKeyOfPickup(pickup)
-	if pickup.ToPickup ~= nil then pickup = pickup:ToPickup() end
-	if pickup then
-		local typ = pickup.Type
-		local var = pickup.Variant
-		local subt = pickup.SubType
-		if CustomHealthAPI.PersistentData.PickupToHeartKeys[typ] and CustomHealthAPI.PersistentData.PickupToHeartKeys[typ][var] then
-			return CustomHealthAPI.PersistentData.PickupToHeartKeys[typ][var][subt]
-		end
-	end
-	return nil;
-end
-
--- Requires an EntityPickup, and returns the CHAPI Health definition if the entity is a registered heart
-function CustomHealthAPI.Helper.GetHealthOfPickup(pickup)
-	if pickup.ToPickup ~= nil then pickup = pickup:ToPickup() end
-	if pickup then
-		local key = CustomHealthAPI.Library.GetKeyOfPickup(pickup)
-		if key then
-			return CustomHealthAPI.PersistentData.HealthDefinitions[key]
-		end
-	end
-	return nil;
-end
-
--- Requires an EntityPickup, and returns the CHAPI Pickpup definition if the entity is a registered pickup
-function CustomHealthAPI.Helper.GetPickupDefinition(pickup)
-	if pickup.ToPickup ~= nil then pickup = pickup:ToPickup() end
-	if pickup then
-		local var = pickup.Variant
-		local subt = pickup.SubType
-		if CustomHealthAPI.PersistentData.PickupDefinitions[var] then
-			return CustomHealthAPI.PersistentData.PickupDefinitions[var][subt]
-		end
-	end
-	return nil;
 end
 
 function CustomHealthAPI.Helper.QueryHealthDefinitions(condFunc)

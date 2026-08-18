@@ -183,12 +183,6 @@ end
 
 function CustomHealthAPI.Helper.CheckIfHealthOfKeeperChanged(player)
 	local data = CustomHealthAPI.Helper.GetOtherData(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
 
 	data.LastValues = data.LastValues or {}
 	data.RedFlash = math.max(0, (data.RedFlash or 0) - 1)
@@ -221,12 +215,6 @@ function CustomHealthAPI.Helper.CheckIfHealthOfPlayerChanged(player)
 	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then return end
 
 	local data = CustomHealthAPI.Helper.GetOtherData(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
 
 	data.LastValues = data.LastValues or {}
 	data.RedFlash = math.max(0, (data.RedFlash or 0) - 1)
@@ -653,12 +641,6 @@ end
 
 function CustomHealthAPI.Helper.ResyncEternalHearts(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
 	
 	local key = "ETERNAL_HEART"
 	local hp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetEternalHearts(player) - CustomHealthAPI.Helper.GetTotalHPOfKey(player, key, true)
@@ -669,12 +651,6 @@ end
 
 function CustomHealthAPI.Helper.ResyncGoldHearts(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
 	
 	local key = "GOLDEN_HEART"
 	local hp = CustomHealthAPI.PersistentData.OverriddenFunctions.GetGoldenHearts(player) - CustomHealthAPI.Helper.GetTotalKeys(player, key, true)
@@ -695,13 +671,7 @@ function CustomHealthAPI.Helper.HandleUnexpectedRed(player)
 		CustomHealthAPI.Library.ClearHPCache(player)
 		
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		if not data then
-			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-			data = CustomHealthAPI.Helper.GetSavedata(player)
-		end
-		local redMasks = data.RedHealthMasks or {}
+		local redMasks = data.RedHealthMasks
 		
 		for i = 1, #redMasks do
 			local mask = redMasks[i]
@@ -733,13 +703,7 @@ function CustomHealthAPI.Helper.HandleUnexpectedMax(player)
 		CustomHealthAPI.Library.ClearHPCache(player)
 
 		local data = CustomHealthAPI.Helper.GetSavedata(player)
-		if not data then
-			CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-			CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-			CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-			data = CustomHealthAPI.Helper.GetSavedata(player)
-		end
-		local otherMasks = data.OtherHealthMasks or {}
+		local otherMasks = data.OtherHealthMasks
 
 		local newKey = CustomHealthAPI.Helper.GetConvertedMaxHealthType(player)
 		if not newKey or not CustomHealthAPI.PersistentData.HealthDefinitions[newKey] then
@@ -790,8 +754,7 @@ function CustomHealthAPI.Helper.HandleUnexpectedMax(player)
 end
 
 function CustomHealthAPI.Helper.ResyncHealthOfPlayer(player, isSubPlayer)
-	if type(CustomHealthAPI.PersistentData.PreventResyncing) == "boolean" and CustomHealthAPI.PersistentData.PreventResyncing then return end
-	if type(CustomHealthAPI.PersistentData.PreventResyncing) == "number" and CustomHealthAPI.PersistentData.PreventResyncing > 0 then return end
+	if CustomHealthAPI.PersistentData.PreventResyncing > 0 then return end
 	if CustomHealthAPI.Helper.PlayerIsIgnored(player) then 
 		if REPENTOGON then 
 			CustomHealthAPI.Helper.HandleGreedsGulletSyncing(player) 
@@ -800,12 +763,7 @@ function CustomHealthAPI.Helper.ResyncHealthOfPlayer(player, isSubPlayer)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetOtherData(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
+	
 	if data.InDamageCallback == Isaac.GetFrameCount() then return end
 	
 	data.InDamageCallback = nil

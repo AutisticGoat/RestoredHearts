@@ -270,7 +270,6 @@ function CustomHealthAPI.Helper.HandleExcessOverlays(player)
 		
 		-- Check for excess overlays.
 		local limit = CustomHealthAPI.Helper.GetNumOverlayableHearts(player, overlayLayerIndex)
-		
 		while CustomHealthAPI.Helper.GetTotalKeysInAllMasks(player, overlayLayer) > limit do
 			local overlayToRemove = nil
 			local overlayToRemoveDef = nil

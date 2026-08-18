@@ -342,9 +342,6 @@ function CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player, isSubP
 		return
 	end
 	avoidRecursive = true
-	if type(CustomHealthAPI.PersistentData.PreventResyncing) == "boolean" then
-		CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing and 1 or 0
-	end
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
 
 	local revived = false

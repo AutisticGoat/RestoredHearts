@@ -58,10 +58,8 @@ function CustomHealthAPI.Helper.HandleTemporaryHP(player, datakey)
 		end
 	end
 	
-	if hpAfter - hpBefore > 0 then
-		CustomHealthAPI.Helper.GetSavedata(player)[datakey] = CustomHealthAPI.Helper.GetSavedata(player)[datakey] or {}
-		table.insert(CustomHealthAPI.Helper.GetSavedata(player)[datakey], {Key = key, HP = hpAfter - hpBefore})
-	end
+	CustomHealthAPI.Helper.GetSavedata(player)[datakey] = CustomHealthAPI.Helper.GetSavedata(player)[datakey] or {}
+	table.insert(CustomHealthAPI.Helper.GetSavedata(player)[datakey], {Key = key, HP = hpAfter - hpBefore})
 end
 
 function CustomHealthAPI.Helper.HandleStrength(player)

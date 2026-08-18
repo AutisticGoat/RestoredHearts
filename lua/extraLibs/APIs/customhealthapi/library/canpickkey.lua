@@ -94,7 +94,7 @@ function CustomHealthAPI.Helper.CanPickRed(player, key)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks or {}
+	local redMasks = data.RedHealthMasks
 	
 	local addPriorityOfKey = CustomHealthAPI.PersistentData.HealthDefinitions[key].AddPriority
 	for i = 1, #redMasks do
@@ -158,7 +158,7 @@ function CustomHealthAPI.Helper.CanPickSoul(player, key)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	
 	local addPriorityOfKey = CustomHealthAPI.PersistentData.HealthDefinitions[key].AddPriority
 	for i = 1, #otherMasks do
@@ -217,7 +217,7 @@ function CustomHealthAPI.Helper.CanPickContainer(player, key)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	
 	local addPriorityOfKey = CustomHealthAPI.PersistentData.HealthDefinitions[key].AddPriority
 	for i = 1, #otherMasks do

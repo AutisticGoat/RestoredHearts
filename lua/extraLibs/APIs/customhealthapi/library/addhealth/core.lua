@@ -307,8 +307,8 @@ function CustomHealthAPI.Library.RemoveRedKey(player, index, ignoreResyncing)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local redMasks = data.RedHealthMasks or {}
-	local otherMasks = data.OtherHealthMasks or {}
+	local redMasks = data.RedHealthMasks
+	local otherMasks = data.OtherHealthMasks
 	
 	local redOrder = {}
 	for i = 1, #redMasks do
@@ -379,7 +379,7 @@ function CustomHealthAPI.Library.RemoveOtherKey(player, index, ignoreResyncing)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 		
 	local healthOrder = {}
 	for i = 1, #otherMasks do
@@ -426,7 +426,7 @@ function CustomHealthAPI.Library.TryConvertOtherKey(player, index, key, force)
 	end
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 		
 	local healthOrder = {}
 	for i = 1, #otherMasks do

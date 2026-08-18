@@ -295,10 +295,6 @@ function CustomHealthAPI.Helper.HandleCollectibleHP(player, item)
 				CustomHealthAPI.Helper.UpdateHealthMasks(player, "EMPTY_HEART", 2, nil, true)
 				needToUpdateState = true
 			end
-			if CustomHealthAPI.Helper.GetTotalMaxHP(player) > 0 and CustomHealthAPI.Helper.GetTotalRedHP(player) == 0 then
-				CustomHealthAPI.Helper.UpdateHealthMasks(player, "RED_HEART", 2)
-				needToUpdateState = true
-			end
 		end
 		if needToUpdateState then
 			CustomHealthAPI.Helper.UpdateBasegameHealthState(player)

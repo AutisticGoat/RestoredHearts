@@ -56,8 +56,6 @@ function CustomHealthAPI.Helper.IsFoundSoul(player)
 end
 
 function CustomHealthAPI.Helper.PlayerIsIgnored(player)
-	if not player then return true end
-
 	local playertype
 	if REPENTOGON then
 		local healthtype = player:GetHealthType()
@@ -180,7 +178,7 @@ function CustomHealthAPI.Helper.GetPlayerIndex(player)
 	else
         rng = player:GetCollectibleRNG(1)
     end
-    if rng == nil then return "" end
+    
     return tostring(rng:GetSeed())
 end
 
@@ -655,13 +653,7 @@ end
 
 function CustomHealthAPI.Helper.HandleBasegameHealthStateUpdate(player, updateFunc)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
-	--local otherMasks = data.OtherHealthMasks or {} // Removed, not used
+	local otherMasks = data.OtherHealthMasks
 	
 	-- before update
 	local addedWhoreOfBabylonPrevention = CustomHealthAPI.Helper.AddWhoreOfBabylonPrevention(player)
@@ -737,21 +729,15 @@ function CustomHealthAPI.Helper.UpdateBasegameHealthState(player)
 	CustomHealthAPI.PersistentData.PreventResyncing = CustomHealthAPI.PersistentData.PreventResyncing + 1
 	
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	
 	data.Cached = {}
 	
-	local maxHealth = CustomHealthAPI.Helper.GetTotalMaxHP(player, true) or 0
-	local brokenHealth = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true) or 0
+	local maxHealth = CustomHealthAPI.Helper.GetTotalMaxHP(player, true)
+	local brokenHealth = CustomHealthAPI.Helper.GetTotalBrokenHP(player, true)
 	
-	local redHealthTotal = CustomHealthAPI.Helper.GetTotalRedHP(player, true, nil, true) or 0
-	local rottenHealth = CustomHealthAPI.Helper.GetTotalHPOfKey(player, "ROTTEN_HEART", true) or 0
+	local redHealthTotal = CustomHealthAPI.Helper.GetTotalRedHP(player, true, nil, true)
+	local rottenHealth = CustomHealthAPI.Helper.GetTotalHPOfKey(player, "ROTTEN_HEART", true)
 	local redHealth = redHealthTotal - (rottenHealth * 2)
 	
 	local updateFunc = function(player)
@@ -978,14 +964,8 @@ end
 
 function CustomHealthAPI.Helper.EmptyAllHealth(player)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	if not data then
-		CustomHealthAPI.Helper.CheckIfHealthOrderSet()
-		CustomHealthAPI.Helper.CheckHealthIsInitializedForPlayer(player)
-		CustomHealthAPI.Helper.CheckSubPlayerInfoOfPlayer(player)
-		data = CustomHealthAPI.Helper.GetSavedata(player)
-	end
-	local redMasks = data.RedHealthMasks or {}
-	local otherMasks = data.OtherHealthMasks or {}
+	local redMasks = data.RedHealthMasks
+	local otherMasks = data.OtherHealthMasks
 	
 	for i = 1, #redMasks do
 		local mask = redMasks[i]
@@ -1129,15 +1109,4 @@ end
 function CustomHealthAPI.Helper.HealthTypeIsIcon(healthType)
 	return healthType == CustomHealthAPI.Enums.HealthTypes.AFTER_HEALTH_ICON or 
 	       healthType == CustomHealthAPI.Enums.HealthTypes.BELOW_HEALTH_ICON
-end
-
-function CustomHealthAPI.Helper.RemoveAllHealth(player)
-	local subplayer = player:GetSubPlayer()
-	for key,info in pairs(CustomHealthAPI.PersistentData.HealthDefinitions) do
-		local typ = CustomHealthAPI.Library.GetInfoOfKey(key, "Type")
-		if typ ~= CustomHealthAPI.Enums.HealthTypes.AFTER_HEALTH_ICON and typ ~= CustomHealthAPI.Enums.HealthTypes.BELOW_HEALTH_ICON then
-			local amount = (CustomHealthAPI.Helper.GetTotalHPOfKey(player, key) or 0) + ((subplayer and CustomHealthAPI.Helper.GetTotalHPOfKey(subplayer, key)) or 0);
-			CustomHealthAPI.Library.AddHealth(player,key,-amount);
-		end
-	end
 end

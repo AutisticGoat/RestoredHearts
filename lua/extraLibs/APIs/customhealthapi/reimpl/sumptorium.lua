@@ -163,7 +163,7 @@ function CustomHealthAPI.Mod:SumptoriumPreSpawnCallback(typ, var, subt, pos, vel
 				
 				if subt == 0 or subt == 6 then
 					-- select the red heart needed to replace red/rotten clot subtype with and update hp to match
-					local redMasks = data.RedHealthMasks or {}
+					local redMasks = data.RedHealthMasks
 					
 					local earliestKey
 					for i = #redMasks, 1, -1 do
@@ -215,7 +215,7 @@ function CustomHealthAPI.Mod:SumptoriumPreSpawnCallback(typ, var, subt, pos, vel
 					end
 				elseif subt == 1 or subt == 2 or subt == 5 then
 					-- select the soul/bone heart needed to replace soul/black/bone clot subtype with and update hp to match
-					local otherMasks = data.OtherHealthMasks or {}
+					local otherMasks = data.OtherHealthMasks
 					
 					local earliestKey
 					for i = #otherMasks, 1, -1 do

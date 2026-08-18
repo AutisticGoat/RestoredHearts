@@ -1,6 +1,6 @@
 function CustomHealthAPI.Helper.TryConvertingContainerHP(player, key)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	local maskIndex = CustomHealthAPI.PersistentData.HealthDefinitions[key].MaskIndex
 	local keyContainingMask = otherMasks[maskIndex]
 	
@@ -138,7 +138,7 @@ end
 
 function CustomHealthAPI.Helper.TryRemoveMaxFromMaskByKey(player, key)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	local healthDef = CustomHealthAPI.PersistentData.HealthDefinitions[key]
 	local maxHP = healthDef.MaxHP
 	local maskIndex = healthDef.MaskIndex
@@ -159,7 +159,7 @@ end
 
 function CustomHealthAPI.Helper.TryRemoveLowPriorityMaxFromMask(player, maskIndex, removingBone, removingBroken, avoidRemovingBone)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	local mask = otherMasks[maskIndex]
 	
 	local lowestPriorityHealth
@@ -207,7 +207,7 @@ end
 
 function CustomHealthAPI.Helper.TryRemoveLowPriorityMaxFromAnywhere(player, removingBone, removingBroken, avoidRemovingBone)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	
 	local lowestPriorityHealth
 	local lowestPriority
@@ -253,7 +253,7 @@ end
 
 function CustomHealthAPI.Helper.HasRemovableMaxHP(player, key, avoidRemovingBone)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	
 	local maxHP = CustomHealthAPI.Library.GetInfoOfKey(key, "MaxHP")
 	local removingBone = maxHP > 0
@@ -290,7 +290,7 @@ end
 
 function CustomHealthAPI.Helper.OtherMaskHasMaxForRemoval(player, maskIndex, key, avoidRemovingBone)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	local mask = otherMasks[maskIndex]
 	
 	local maxHP = CustomHealthAPI.Library.GetInfoOfKey(key, "MaxHP")
@@ -325,7 +325,7 @@ end
 
 function CustomHealthAPI.Helper.MinusContainerMain(player, key, hp, avoidRemovingBone)
 	local data = CustomHealthAPI.Helper.GetSavedata(player)
-	local otherMasks = data.OtherHealthMasks or {}
+	local otherMasks = data.OtherHealthMasks
 	local healthDef = CustomHealthAPI.PersistentData.HealthDefinitions[key]
 	local maskIndex = healthDef.MaskIndex
 	local maxHP = healthDef.MaxHP
